@@ -1,0 +1,5 @@
+{
+	"serverRoot" : "http://localhost:3000",
+	"apiRoot" : "",
+	"winHostPort" : 3001
+}

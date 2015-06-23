@@ -1,0 +1,22 @@
+{
+  "name": "publishui",
+  "version": "0.0.1",
+  "scripts": [
+    "modal.js"
+  ],
+  "styles": [
+    "modal.css"
+  ],
+ "remotes": [
+    "https://raw.github.com",
+    "https://raw.githubusercontent.com"
+  ],
+  "main": "modal.js",
+  "dependencies": {
+    "component/pillbox" : "master",
+    "optimuslime/el.js": "master",
+    "component/classes": "master",
+    "component/emitter": "master",
+    "optimuslime/modal": "master"
+  }
+}

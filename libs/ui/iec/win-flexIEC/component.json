@@ -1,0 +1,14 @@
+{
+  "name": "win-flexIEC",
+  "description": "Combine win-iec and flexIEC to be a UI comoponent with iec evolution callbacks",
+  "version": "0.0.1",
+  "local" : ["flexiec", "win-iec"],
+  "dependencies": {
+    "component/emitter" : "master"
+  },
+  "scripts": [
+    "win-flexIEC.js"
+  ],
+  "main": "win-flexIEC.js",
+  "license": ["MIT"]
+}

@@ -1,0 +1,46 @@
+/* apply a natural box layout model to all elements */
+*, *:before, *:after {
+  -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box;
+ }
+
+.phyloLink
+{
+	display: inline-block;
+	font-weight: 700;
+	font-size: .7em;
+	cursor:pointer;
+	/*color: #333;*/
+	text-decoration: none;
+	color: #900;
+	/*text-transform: uppercase;*/
+	/*letter-spacing: 2px;*/
+	padding: 10px 20px;
+	border: 3px solid #900;
+	margin: 10px 0 0;
+	outline: none;
+}
+
+.border
+{
+	border: 1px solid black;
+}
+
+div.home 
+{
+	margin: 10px;
+}
+
+.homeElementButton
+{
+	display: inline-block;
+	font-weight: 700;
+	font-size: 16px;
+	cursor:pointer;
+	color: #333;
+	text-transform: uppercase;
+	letter-spacing: 2px;
+	padding: 10px 20px;
+	border: 3px solid #333;
+	margin: 10px 0 0;
+	outline: none;
+}

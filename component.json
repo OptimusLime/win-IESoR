@@ -1,0 +1,51 @@
+{
+  "name": "win-picbreeder",
+  "repo": "OptimusLime/win-Picbreeder",
+  "version": "0.0.1-1",
+  "keywords": [
+    "iec",
+    "win",
+    "picbreeder"
+  ],
+  "dependencies": {
+    "component/worker": "master",
+    "optimuslime/traverse": "0.6.6-1",
+    "optimuslime/el.js": "master",
+    "optimuslime/win-query": "0.0.1-4",
+    "optimuslime/win-publish": "0.0.1-4",
+    "optimuslime/win-backbone": "0.0.4-5",
+    "optimuslime/win-schema": "0.0.x",
+    "optimuslime/win-gen": "0.0.x",
+    "optimuslime/win-data": "0.0.1-3",
+    "optimuslime/win-phylogeny": "0.0.1-1",
+    "optimuslime/win-utils": "0.1.1"
+  },
+  "main": "win-Picbreeder.js",
+  "scripts": [
+    "win-Picbreeder.js"
+  ],
+  "styles" : ["css/main.css"],
+  "local": [
+    "win-neat",
+    "win-iec",
+    "win-home-ui",
+    "win-flexIEC",
+    "flexstatic",
+    "flexparents",
+    "flexiec",
+    "webworker-queue",
+    "cppn-additions",
+    "pbEncoding",
+    "win-setup"
+  ],
+  "paths": [
+    "libs",
+    "libs/initialization",
+    "libs/encoding",
+    "libs/evolution",
+    "libs/ui/home",
+    "libs/ui/iec",
+    "libs/webworkers"
+  ],
+  "license": "MIT"
+}
