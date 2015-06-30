@@ -1,11 +1,11 @@
 {
-  "name": "win-picbreeder",
-  "repo": "OptimusLime/win-Picbreeder",
+  "name": "win-iesor",
+  "repo": "OptimusLime/win-IESoR",
   "version": "0.0.1-1",
   "keywords": [
     "iec",
     "win",
-    "picbreeder"
+    "iesor"
   ],
   "dependencies": {
     "component/worker": "master",
@@ -20,9 +20,9 @@
     "optimuslime/win-phylogeny": "0.0.1-1",
     "optimuslime/win-utils": "0.1.1"
   },
-  "main": "win-Picbreeder.js",
+  "main": "win-IESoR.js",
   "scripts": [
-    "win-Picbreeder.js"
+    "win-IESoR.js"
   ],
   "styles" : ["css/main.css"],
   "local": [
@@ -35,7 +35,7 @@
     "flexiec",
     "webworker-queue",
     "cppn-additions",
-    "pbEncoding",
+    "iesorEncoding",
     "win-setup"
   ],
   "paths": [

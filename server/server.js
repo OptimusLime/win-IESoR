@@ -8,11 +8,14 @@ var exp = {launch: launcher, clean: cleanDatabase};
 
 module.exports = exp;
 
-var options =  {port: 3000, modifier: 'pic'};
-var requiredObjects = {artifactType: "picArtifact", directory: __dirname, seedDirectory: './seeds', schemaDirectory: './schemas'};
+var options =  {port: 3000, modifier: 'iesor'};
+var requiredObjects = {artifactType: "iesorArtifact", 
+directory: __dirname, seedDirectory: './seeds', 
+schemaDirectory: './schemas'};
 
 function launcher()
 {
+	console.log('Launching win-IESoR with object: ', requiredObjects);
 	winjs.launchWIN(requiredObjects, options,
 	    function(err, app)
 	{

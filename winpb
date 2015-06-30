@@ -137,12 +137,12 @@ program
   .action(function(configFile, options){
     if(!configFile)
     {
-      console.log('Missing config file for constructing picbreeder.');
+      console.log('Missing config file for constructing iesor.');
       return;
     }
     var configJSON = retrieveConfig(configFile);
 
-    var defaultConfigLocation = "pbConfig.json";
+    var defaultConfigLocation = "iesorConfig.json";
     fs.writeFileSync(defaultConfigLocation, JSON.stringify(defaultConfigLocation));
 
       buildProject(defaultConfigLocation, options);
@@ -160,7 +160,7 @@ program
     }
     var configJSON = retrieveConfig(configFile);
 
-    var defaultConfigLocation = "pbConfig.json";
+    var defaultConfigLocation = "iesorConfig.json";
     fs.writeFileSync(defaultConfigLocation, JSON.stringify(configJSON));
 
     //other stuff to do here

@@ -19,12 +19,12 @@ function pbServer(finished)
 	app.get("/", function(req,res)
 	{
 		//send home for when you enter nothing!
-		res.sendfile(__dirname + "/pbHome.html");
+		res.sendfile(__dirname + "/iesorHome.html");
 	});
 
 	///
-  	winsave.createWinApp('pic', 
-  		{artifactType: "picArtifact", 
+  	winsave.createWinApp('iesor', 
+  		{artifactType: "iesorArtifact", 
   		directory: path.resolve(__dirname, "../server"), seedDirectory: './seeds', schemaDirectory: './schemas'},
   		 function(err, apiApp, mongooseConnection)
 	    {

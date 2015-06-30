@@ -3,6 +3,6 @@
         {"type": "String", "ref" : "NEATGenotype"},
 
     "meta":
-        {"imageTitle": "String",
-        "imageTags": ["String"]}
+        {"iesorTitle": "String",
+        "iesorTags": ["String"]}
 }

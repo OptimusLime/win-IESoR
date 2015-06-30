@@ -39,13 +39,15 @@ onmessage = function(e){
 			throw new Error("No wid, width, or height provided for fixed size CPPN Activation");
 
 		//okay, now we have our CPPN all pampered and ready to go
-		var cppnOutputs = runCPPNAcrossFixedSize(cppnFunction, {width: funData.width, height: funData.height});
+        // var cppnOutputs = runCPPNAcrossFixedSize(cppnFunction, {width: funData.width, height: funData.height});
+		var cppnOutputs = runCPPNAcrossFixedSize(cppnFunction, funData.gridSize, funData.useLEO, funData.weightRange);
+        // activationFunction, size, useLeo, weightRange, testing
 
 		//cppn outputs to RGB Bitmap -- huzzah!
-		var fileOutput = generateBitmap.generateBitmapDataURL(cppnOutputs);
+		// var fileOutput = generateBitmap.generateBitmapDataURL(cppnOutputs);
 
 		//send back our data, we'll have to loop through it and convert to bytes, but this is the raw data
-		postMessage({wid: wid, dataURL: fileOutput, width: funData.width, height: funData.height});
+		postMessage({wid: wid, body: cppnOutputs, size: funData.gridSize});
 	}
 	catch(e)
 	{
@@ -54,6 +56,18 @@ onmessage = function(e){
 	}
 };
 
+
+function BodyConnection(gid, weight, srctgtObj)
+{
+
+    var self = this;
+    self.gid = gid;
+    self.weight = weight;
+    self.sourceID = srctgtObj.sourceID;
+    self.targetID = srctgtObj.targetID;
+
+    return self;
+};
 
 function containCPPN(nodesInOrder, functionsForNodes, biasCount, outputCount)
 {
@@ -82,8 +96,277 @@ function containCPPN(nodesInOrder, functionsForNodes, biasCount, outputCount)
     }
 };
 
-function runCPPNAcrossFixedSize(activationFunction, size)
+function ConstructGridObject(resolution)
 {
+    var dx = 2 / (resolution-1);
+    var dy = 2 / (resolution -1);
+    var fX = -1, fY = -1;
+
+    //var threeNodeDistance = Math.sqrt(9.0 * dx * dx + 9.0 * dy * dy);
+    var xDistanceThree = 3 * dx;
+    var yDistanceThree = 3 * dy;
+
+    var queryPoints = [];
+
+    for (var x = 0; x < resolution; x++)
+    {
+        for (var y = 0; y < resolution; y++)
+        {
+            queryPoints.push({x: fX, y: fY});
+            //now increment fy and go again
+            fY += dy;
+        }
+        //increment dx, run through again
+        //reset fy to -1
+        fX += dx;
+        fY = -1;
+    }
+
+    return {grid: queryPoints, threeX: xDistanceThree, threeY: yDistanceThree};
+
+};
+
+function runCPPNAcrossFixedSize(activationFunction, size, useLeo, weightRange, testing)
+{
+
+    //has our grdi to query, and max distance things
+    //build grid of points, and define 3*dx and 3*dy for the resolution
+    var grid = ConstructGridObject(size);
+
+    //we'll check for emptyness
+    var isEmpty = false;
+
+    //we want the genome, so we can acknowledge the genomeID!
+
+    //now convert a network to a set of hidden neurons and connections
+
+    //we'll make body specific function calls later
+
+    var inputs =[], outputs = [], hiddenNeurons = {};
+
+    //zero out our count object :)
+    hiddenNeurons.count = 0;
+
+    var connections = [];
+
+    //loop through a grid, defined by some resolution, and test every connection against another using leo
+
+
+    var queryPoints = grid.grid;
+    var xDistanceThree = grid.threeX;
+    var yDistanceThree = grid.threeY;
+
+//        console.log(queryPoints);
+    var counter = 0;
+    var conSourcePoints = {};//new Dictionary<long, PointF>();
+    var conTargetPoints = {};//new Dictionary<long, PointF>();
+
+    var accessDoubleArray = function(obj, xyPoint)
+    {
+        return obj[xyPoint.x][xyPoint.y];
+    };
+    var ensureDoubleArray = function(obj, x, y)
+    {
+        //don't use !obj[x] since 0 gets grouped into that. poop.
+        if (obj[x] === undefined){
+            obj[x] = {};
+        }
+
+        if(obj[x][y] === undefined){
+            obj[x][y] = obj.count;
+            obj.count++;
+//                console.log('x: ' + x + ' y: ' + y + ' obj: ' + obj[x][y]);
+        }
+    };
+
+    //Dictionary<string, List<PointF>> pointsChecked = new Dictionary<string, List<PointF>>();
+    //List<PointF> pList;
+    var src, tgt;
+    var cnt =0;
+    var allBodyOutputs = [];
+    var allBodyInputs = [];
+
+    var attemptToConnectionMap = {};
+
+    //for each points we have
+    for(var p1=0; p1 < queryPoints.length; p1++)
+    {
+        var xyPoint = queryPoints[p1];
+
+        //query against all other points (possibly limiting certain connection lengths
+        for(var p2 = p1; p2 < queryPoints.length; p2++)
+        {
+            var otherPoint = queryPoints[p2];
+
+            if (p1 != p2 && (Math.abs(xyPoint.x - otherPoint.x) < xDistanceThree && Math.abs(xyPoint.y - otherPoint.y) < yDistanceThree))
+            {
+                var ins = [xyPoint.x, xyPoint.y, otherPoint.x, otherPoint.y];
+                var outs = activationFunction(ins);
+                // cppnToBody.queryCPPNOutputs(cppn, );//, maxXDistanceCenter(xyPoint, otherPoint),  minYDistanceGround(xyPoint, otherPoint));
+                var weight = outs[0];
+
+                if(testing){
+                    allBodyInputs.push({p1: xyPoint, p2: otherPoint});
+                    allBodyOutputs.push(outs);
+
+                }
+                if (useLeo)
+                {
+                    if (outs[1] > 0)
+                    {
+//                            console.log(outs);
+//                            console.log('XYPoint: ');console.log( xyPoint);
+//                            console.log('otherPoint: ');console.log( otherPoint);
+                        //add to hidden neurons
+
+                        ensureDoubleArray(hiddenNeurons, xyPoint.x, xyPoint.y);
+                        src = accessDoubleArray(hiddenNeurons, xyPoint);
+
+                        ensureDoubleArray(hiddenNeurons, otherPoint.x, otherPoint.y);
+                        tgt =  accessDoubleArray(hiddenNeurons, otherPoint);
+
+                        conSourcePoints[counter] = xyPoint;
+                        conTargetPoints[counter] = otherPoint;
+
+                        var connection = new BodyConnection(counter++, weight*weightRange, {sourceID:src, targetID:tgt});
+                        connection.coordinates = [xyPoint.x, xyPoint.y, otherPoint.x, otherPoint.y];
+                        connection.cppnOutputs = outs;
+
+                        connections.push(connection);
+
+                        if(testing)
+                            attemptToConnectionMap[allBodyInputs.length] = counter-1;
+
+                    }
+                }
+                else
+                {
+                    //add to hidden neurons
+                    ensureDoubleArray(hiddenNeurons, xyPoint.x, xyPoint.y);
+                    src = accessDoubleArray(hiddenNeurons, xyPoint);
+
+                    ensureDoubleArray(hiddenNeurons, otherPoint.x, otherPoint.y);
+                    tgt =  accessDoubleArray(hiddenNeurons, otherPoint);
+
+                    conSourcePoints[counter] = xyPoint;
+                    conTargetPoints[counter] = otherPoint;
+
+                    var connection = new BodyConnection(counter++, weight*weightRange, {sourceID:src, targetID:tgt});
+                    connection.coordinates = [xyPoint.x, xyPoint.y, otherPoint.x, otherPoint.y];
+                    connection.cppnOutputs = outs;
+
+                    connections.push(connection);
+
+                    if(testing)
+                        attemptToConnectionMap[allBodyInputs.length] = counter-1;//connections.length;
+                }
+
+            }
+        }
+    }
+
+//        console.log('Counter: ' + counter);
+
+    var connBefore = connections.length;
+    var neuronBefore = hiddenNeurons.count;
+
+//        PreHiddenLocations
+//        var preNeurons = {count: 0};
+
+//        if(testing){
+//            var inverted = {};
+//
+//            for(var key in hiddenNeurons)
+//            {
+//                if(key != 'count')
+//                {
+//                    for(var innerKey in hiddenNeurons[key])
+//                    {
+//                        inverted[(hiddenNeurons[key][innerKey])] = {x: key, y: innerKey};
+//                    }
+//                }
+//            }
+//            console.log(inverted);
+//
+//            for(var ix =0; ix < hiddenNeurons.count; ix++)
+//            {
+//                console.log('ix: ' + ix + ' inv: ' + inverted[ix]);
+//                var point = inverted[ix];
+//                ensureDoubleArray(preNeurons, point.x, point.y);
+//            }
+//        }
+
+    var rep = ensureSingleConnectedStructure(connections, hiddenNeurons, conSourcePoints, conTargetPoints);
+
+    connections = rep.connections;
+    hiddenNeurons = rep.hiddenNeurons;
+
+//        console.log('Looking at body with: ' + hiddenNeurons.count + ' conns: ' + connections.length);
+    if (hiddenNeurons.count > 20 || connections.length > 100)
+    {
+        hiddenNeurons = {count:0};//new List<PointF>();
+        connections = [];//new ConnectionGeneList();
+    }
+
+
+    if (hiddenNeurons.count == 0 || connections.length == 0)
+        isEmpty = true;
+
+
+    var invertedHidden = {};
+    for(var key in hiddenNeurons)
+    {
+        if(key != 'count')
+        {
+            for(var innerKey in hiddenNeurons[key])
+            {
+                invertedHidden[hiddenNeurons[key][innerKey]] = {x: parseFloat(key), y:parseFloat(innerKey)};
+            }
+        }
+    }
+
+    var hiddenFinal = [];
+    for(var i=0; i< hiddenNeurons.count; i++)
+    {
+        hiddenFinal.push(invertedHidden[i]);
+    }
+
+
+
+    var esBody = {
+        connections : connections,
+        hiddenLocations : hiddenFinal,//hiddenNeurons,
+        inputLocations : inputs,
+        useLEO : useLeo,
+        isEmpty: isEmpty,
+        fromJS: true
+    };
+
+    if(testing)
+    {
+        //an array of point pairs (p1, p2), representing input coordinates
+        esBody['allBodyInputs'] = allBodyInputs;
+        //an array of all the network outputs
+        esBody['allBodyOuputs'] = allBodyOutputs;
+
+        //what index of attempts did we create this connection
+        esBody['indexToConnection'] = attemptToConnectionMap;
+
+        //count of neurons and connections before the cutoff function (if over a certain amount, they are cut off)
+        esBody['beforeNeuron'] = neuronBefore;
+        esBody['beforeConnection'] = connBefore;
+    }
+
+    //then convert the body into JSON
+//        console.log(" Nodes: " + hiddenNeurons.count + " Connections: " + connections.length);
+
+    return esBody;
+};
+
+function oldActivation(activationFunction, size)
+{
+
+
     var inSqrt2 = Math.sqrt(2);
 
     var allX = size.width, allY = size.height;
@@ -145,349 +428,171 @@ function FloatToByte(arr)
     return conv;
 };
 
-function PicHSBtoRGB(h,s,v)
+function ensureSingleConnectedStructure(connections, hiddenNeurons, conSourcePoints, conTargetPoints)
 {
+    //a list of lists
+    var allChains = [];
+    var maxChain = 0;
 
-    h = (h*6.0)%6.0;
+    for(var i=0; i < connections.length; i++)
+    {
+        var connection = connections[i];
 
+        var isInChain = false;
+        var nChain;
+        //track connected structures through all the other chains
+        for(var c=0; c< allChains.length; c++)
+        {
 
-    var r = 0.0, g = 0.0, b = 0.0;
+            //check our chain out, does it have this neuron?
+            var chain = allChains[c];
 
-    if(h < 0.0) h += 6.0;
-    var hi = Math.floor(h);
-    var f = h - hi;
+            //what's the largest chain we've seen
+            maxChain = Math.max(chain.count, maxChain);
 
-    var vs = v * s;
-    var vsf = vs * f;
-
-    var p = v - vs;
-    var q = v - vsf;
-    var t = v - vs + vsf;
-
-    switch(hi) {
-        case 0: r = v; g = t; b = p; break;
-        case 1: r = q; g = v; b = p; break;
-        case 2: r = p; g = v; b = t; break;
-        case 3: r = p; g = q; b = v; break;
-        case 4: r = t; g = p; b = v; break;
-        case 5: r = v; g = p; b = q; break;
-    }
-
-    return [r,g,b];
-};
-
-
-//base64 stuff
-//from:
-//https://code.google.com/p/stringencoders/source/browse/trunk/javascript/base64.js?r=230
-
-
-/*
- * Copyright (c) 2010 Nick Galbreath
- * http://code.google.com/p/stringencoders/source/browse/#svn/trunk/javascript
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- */
-
-/* base64 encode/decode compatible with window.btoa/atob
- *
- * window.atob/btoa is a Firefox extension to convert binary data (the "b")
- * to base64 (ascii, the "a").
- *
- * It is also found in Safari and Chrome.  It is not available in IE.
- *
- * if (!window.btoa) window.btoa = base64.encode
- * if (!window.atob) window.atob = base64.decode
- *
- * The original spec's for atob/btoa are a bit lacking
- * https://developer.mozilla.org/en/DOM/window.atob
- * https://developer.mozilla.org/en/DOM/window.btoa
- *
- * window.btoa and base64.encode takes a string where charCodeAt is [0,255]
- * If any character is not [0,255], then an DOMException(5) is thrown.
- *
- * window.atob and base64.decode take a base64-encoded string
- * If the input length is not a multiple of 4, or contains invalid characters
- *   then an DOMException(5) is thrown.
- */
-
-base64.PADCHAR = '=';
-base64.ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-base64.makeDOMException = function() {
-    // sadly in FF,Safari,Chrome you can't make a DOMException
-    var e, tmp;
-
-    try {
-        return new DOMException(DOMException.INVALID_CHARACTER_ERR);
-    } catch (tmp) {
-        // not available, just passback a duck-typed equiv
-        // https://developer.mozilla.org/en/Core_JavaScript_1.5_Reference/Global_Objects/Error
-        // https://developer.mozilla.org/en/Core_JavaScript_1.5_Reference/Global_Objects/Error/prototype
-        var ex = new Error("DOM Exception 5");
-
-        // ex.number and ex.description is IE-specific.
-        ex.code = ex.number = 5;
-        ex.name = ex.description = "INVALID_CHARACTER_ERR";
-
-        // Safari/Chrome output format
-        ex.toString = function() { return 'Error: ' + ex.name + ': ' + ex.message; };
-        return ex;
-    }
-};
-
-base64.getbyte64 = function(s,i) {
-    // This is oddly fast, except on Chrome/V8.
-    //  Minimal or no improvement in performance by using a
-    //   object with properties mapping chars to value (eg. 'A': 0)
-    var idx = base64.ALPHA.indexOf(s.charAt(i));
-    if (idx === -1) {
-        throw base64.makeDOMException();
-    }
-    return idx;
-};
-
-base64.decode = function(s) {
-    // convert to string
-    s = '' + s;
-    var getbyte64 = base64.getbyte64;
-    var pads, i, b10;
-    var imax = s.length;
-    if (imax === 0) {
-        return s;
-    }
-
-    if (imax % 4 !== 0) {
-        throw base64.makeDOMException();
-    }
-
-    pads = 0
-    if (s.charAt(imax - 1) === base64.PADCHAR) {
-        pads = 1;
-        if (s.charAt(imax - 2) === base64.PADCHAR) {
-            pads = 2;
+            if (chain[connection.sourceID] || chain[connection.targetID])
+            {
+                nChain = chain;
+                isInChain = true;
+                break;
+            }
         }
-        // either way, we want to ignore this last block
-        imax -= 4;
-    }
 
-    var x = [];
-    for (i = 0; i < imax; i += 4) {
-        b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12) |
-            (getbyte64(s,i+2) << 6) | getbyte64(s,i+3);
-        x.push(String.fromCharCode(b10 >> 16, (b10 >> 8) & 0xff, b10 & 0xff));
-    }
-
-    switch (pads) {
-        case 1:
-            b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12) | (getbyte64(s,i+2) << 6);
-            x.push(String.fromCharCode(b10 >> 16, (b10 >> 8) & 0xff));
-            break;
-        case 2:
-            b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12);
-            x.push(String.fromCharCode(b10 >> 16));
-            break;
-    }
-    return x.join('');
-};
-
-base64.getbyte = function(s,i) {
-    var x = s.charCodeAt(i);
-    if (x > 255) {
-        throw base64.makeDOMException();
-    }
-    return x;
-};
-
-base64.encode = function(s) {
-    if (arguments.length !== 1) {
-        throw new SyntaxError("Not enough arguments");
-    }
-    var padchar = base64.PADCHAR;
-    var alpha   = base64.ALPHA;
-    var getbyte = base64.getbyte;
-
-    var i, b10;
-    var x = [];
-
-    // convert to string
-    s = '' + s;
-
-    var imax = s.length - s.length % 3;
-
-    if (s.length === 0) {
-        return s;
-    }
-    for (i = 0; i < imax; i += 3) {
-        b10 = (getbyte(s,i) << 16) | (getbyte(s,i+1) << 8) | getbyte(s,i+2);
-        x.push(alpha.charAt(b10 >> 18));
-        x.push(alpha.charAt((b10 >> 12) & 0x3F));
-        x.push(alpha.charAt((b10 >> 6) & 0x3f));
-        x.push(alpha.charAt(b10 & 0x3f));
-    }
-    switch (s.length - imax) {
-        case 1:
-            b10 = getbyte(s,i) << 16;
-            x.push(alpha.charAt(b10 >> 18) + alpha.charAt((b10 >> 12) & 0x3F) +
-                padchar + padchar);
-            break;
-        case 2:
-            b10 = (getbyte(s,i) << 16) | (getbyte(s,i+1) << 8);
-            x.push(alpha.charAt(b10 >> 18) + alpha.charAt((b10 >> 12) & 0x3F) +
-                alpha.charAt((b10 >> 6) & 0x3f) + padchar);
-            break;
-    }
-    return x.join('');
-};
-
-//Generate bitmap stuff
-/*
-* Code to generate Bitmap images (using data urls) from rows of RGB arrays.
-* Specifically for use with http://mrcoles.com/low-rest-paint/
-*
-* Research:
-*
-* RFC 2397 data URL
-* http://www.xs4all.nl/~wrb/Articles/Article_IMG_RFC2397_P1_01.htm
-*
-* BMP file Format
-* http://en.wikipedia.org/wiki/BMP_file_format#Example_of_a_2.C3.972_Pixel.2C_24-Bit_Bitmap_.28Windows_V3_DIB.29
-*
-* BMP Notes
-*
-* - Integer values are little-endian, including RGB pixels, e.g., (255, 0, 0) -> \x00\x00\xFF
-* - Bitmap data starts at lower left (and reads across rows)
-* - In the BMP data, padding bytes are inserted in order to keep the lines of data in multiples of four,
-*   e.g., a 24-bit bitmap with width 1 would have 3 bytes of data per row (R, G, B) + 1 byte of padding
-*/
-
-function _asLittleEndianHex(value, bytes) {
-    // Convert value into little endian hex bytes
-    // value - the number as a decimal integer (representing bytes)
-    // bytes - the number of bytes that this value takes up in a string
-
-    // Example:
-    // _asLittleEndianHex(2835, 4)
-    // > '\x13\x0b\x00\x00'
-
-    var result = [];
-
-    for (; bytes>0; bytes--) {
-        result.push(String.fromCharCode(value & 255));
-        value >>= 8;
-    }
-
-    return result.join('');
-}
-
-function _collapseData(rows, row_padding) {
-    // Convert rows of RGB arrays into BMP data
-    var i,
-        rows_len = rows.length,
-        j,
-        pixels_len = rows_len ? rows[0].length : 0,
-        pixel,
-        padding = '',
-        result = [];
-
-    for (; row_padding > 0; row_padding--) {
-        padding += '\x00';
-    }
-
-    for (i=0; i<rows_len; i++) {
-        for (j=0; j<pixels_len; j++) {
-            pixel = rows[i][j];
-            result.push(String.fromCharCode(pixel[2]) +
-                String.fromCharCode(pixel[1]) +
-                String.fromCharCode(pixel[0]));
+        if (!isInChain)
+        {
+            //chains are just objects, and we can quickly lookup if we've seen anything before
+            //we do lick to keep count though!
+            nChain = {count:0};
+            allChains.push(nChain);
         }
-        result.push(padding);
-    }
 
-    return result.join('');
-}
-
-function _scaleRows(rows, scale) {
-    // Simplest scaling possible
-    var real_w = rows.length,
-        scaled_w = parseInt(real_w * scale),
-        real_h = real_w ? rows[0].length : 0,
-        scaled_h = parseInt(real_h * scale),
-        new_rows = [],
-        new_row, x, y;
-
-    for (y=0; y<scaled_h; y++) {
-        new_rows.push(new_row = []);
-        for (x=0; x<scaled_w; x++) {
-            new_row.push(rows[parseInt(y/scale)][parseInt(x/scale)]);
+        if (!nChain[connection.sourceID]){
+            nChain[connection.sourceID] = true;
+            nChain.count++;
+        }
+        if (!nChain[connection.targetID]){
+            nChain[connection.targetID] = true;
+            nChain.count++;
         }
     }
-    return new_rows;
-}
 
-//generate bitmaps from rows of rgb values
-//from: http://mrcoles.com/low-res-paint/
-//and: http://mrcoles.com/blog/making-images-byte-by-byte-javascript/
-generateBitmap.generateBitmapDataURL = function(rows, scale) {
-    // Expects rows starting in bottom left
-    // formatted like this: [[[255, 0, 0], [255, 255, 0], ...], ...]
-    // which represents: [[red, yellow, ...], ...]
-    scale = scale || 1;
-    if (scale != 1) {
-        rows = _scaleRows(rows, scale);
+
+    //gotta find the max chain, here is our check
+    //allChains.Find(chain => chain.length == maxChain);
+    var finalChain;
+    for(var c =0; c < allChains.length; c++)
+    {
+        if(allChains[c].count == maxChain)
+        {
+            finalChain = allChains[c];
+            break;
+        }
     }
 
-    var height = rows.length,                                // the number of rows
-        width = height ? rows[0].length : 0,                 // the number of columns per row
-        row_padding = (4 - (width * 3) % 4) % 4,             // pad each row to a multiple of 4 bytes
-        num_data_bytes = (width * 3 + row_padding) * height, // size in bytes of BMP data
-        num_file_bytes = 54 + num_data_bytes,                // full header size (offset) + size of data
-        file;
+    var inverseHidden = {};
+    //we might adjust hidden neuron count later, make sure we keep original value
+    var originalHiddenCount = hiddenNeurons.count;
+    for(var key in hiddenNeurons)
+    {
+        if(key != 'count')
+        {
+            for(var innerKey in hiddenNeurons[key])
+            {
+                inverseHidden[hiddenNeurons[key][innerKey]] = {x:key, y:innerKey};
+            }
+        }
+    }
 
-    height = _asLittleEndianHex(height, 4);
-    width = _asLittleEndianHex(width, 4);
-    num_data_bytes = _asLittleEndianHex(num_data_bytes, 4);
-    num_file_bytes = _asLittleEndianHex(num_file_bytes, 4);
 
-    // these are the actual bytes of the file...
 
-    file = ('BM' +               // "Magic Number"
-        num_file_bytes +     // size of the file (bytes)*
-        '\x00\x00' +         // reserved
-        '\x00\x00' +         // reserved
-        '\x36\x00\x00\x00' + // offset of where BMP data lives (54 bytes)
-        '\x28\x00\x00\x00' + // number of remaining bytes in header from here (40 bytes)
-        width +              // the width of the bitmap in pixels*
-        height +             // the height of the bitmap in pixels*
-        '\x01\x00' +         // the number of color planes (1)
-        '\x18\x00' +         // 24 bits / pixel
-        '\x00\x00\x00\x00' + // No compression (0)
-        num_data_bytes +     // size of the BMP data (bytes)*
-        '\x13\x0B\x00\x00' + // 2835 pixels/meter - horizontal resolution
-        '\x13\x0B\x00\x00' + // 2835 pixels/meter - the vertical resolution
-        '\x00\x00\x00\x00' + // Number of colors in the palette (keep 0 for 24-bit)
-        '\x00\x00\x00\x00' + // 0 important colors (means all colors are important)
-        _collapseData(rows, row_padding)
-        );
+    if (finalChain && finalChain.count != 0)
+    {
+        var markDelete = [];
+        var point;
+        for(var c =0; c < connections.length; c++)
+        {
+            var connection = connections[c];
 
-    return 'data:image/bmp;base64,' + base64.encode(file);
+            var del = false;
+            //if we don't have you in our chain, get rid of the object
+            if (!finalChain[connection.sourceID])
+            {
+                point = conSourcePoints[connection.gid];
+
+                //remove hidden node, friend!
+                if(hiddenNeurons[point.x][point.y] !== undefined){
+                    delete hiddenNeurons[point.x][point.y];
+                    hiddenNeurons.count--;
+                }
+
+                //hiddenNeurons.Remove(conSourcePoints[conn.InnovationId]);
+                del = true;
+
+            }
+
+            if (!finalChain[connection.targetID])
+            {
+                point = conTargetPoints[connection.gid];
+
+                //remove hidden node, friend!
+                if(hiddenNeurons[point.x][point.y] !== undefined){
+                    delete hiddenNeurons[point.x][point.y];
+                    hiddenNeurons.count--;
+                }
+
+                //hiddenNeurons.Remove(conTargetPoints[conn.InnovationId]);
+
+                del = true;
+            }
+
+            if (del){
+                markDelete[connection.gid] = true;
+            }
+        }
+
+        //let's rebuild connections, and remove any deleted objects
+        var des = connections.length;
+        var repConns = [];
+        for(var c=0; c< connections.length; c++)
+        {
+            if(!markDelete[connections[c].gid])
+                repConns.push(connections[c]);
+        }
+        connections = repConns;
+//            console.log('actual Size: ' + des + ' Desired: ' + repConns.length);
+//            console.log('Connections: ');
+//            console.log(repConns);
+
+//                markDelete.ForEach(x => connections.Remove(x));
+    }
+
+    //now that we've deleted the hidden neuron objects, lets recalculate the current indices
+    var nCount = 0, p;
+
+    //we access the inverse object in order, and map to our hidden node array with deleted object
+    for(var hid = 0; hid < originalHiddenCount; hid++)
+    {
+        if(inverseHidden[hid]){
+            p = inverseHidden[hid];
+            if(hiddenNeurons[p.x][p.y] != undefined)
+                hiddenNeurons[p.x][p.y] = nCount++;
+        }
+    }
+
+
+    for(var c=0; c< connections.length; c++)
+    {
+        var connection = connections[c];
+
+        //readjust connection source/target depending on hiddenNeuron array
+        var point = conSourcePoints[connection.gid];
+        connection.sourceID = hiddenNeurons[point.x][point.y];
+
+        //now adjust the target!
+        point = conTargetPoints[connection.gid];
+        connection.targetID = hiddenNeurons[point.x][point.y];
+    }
+
+    return {connections: connections, hiddenNeurons: hiddenNeurons};
 };
+

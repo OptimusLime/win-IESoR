@@ -2,11 +2,11 @@
 //making sure the database is filled with objects of the schema type
 // var wMath = require('win-utils').math;
 
-var picbreederSchema = require("./picbreederSchema.js");
+var iesorSchema = require("./iesorSchema.js");
 
-module.exports = pbEncoding;
+module.exports = iesorEncoding;
 
-function pbEncoding(backbone, globalConfig, localConfig)
+function iesorEncoding(backbone, globalConfig, localConfig)
 {
 	var self = this;
 
@@ -14,7 +14,7 @@ function pbEncoding(backbone, globalConfig, localConfig)
 	self.winFunction = "encoding";
 
     //for convenience, this is our artifact type
-	self.encodingName = "picArtifact";
+	self.encodingName = "iesorArtifact";
 
 	self.log = backbone.getLogger(self);
 	//only vital stuff goes out for normal logs
@@ -88,14 +88,14 @@ function pbEncoding(backbone, globalConfig, localConfig)
 
 	self.initialize = function(done)
     {
-    	self.log("Init win-iesor encoding: ", picbreederSchema);
+    	self.log("Init win-iesor encoding: ", iesorSchema);
 
 		//how we talk to the backbone by emitting events
     	var emitter = backbone.getEmitter(self);
 
 		//add our neat genotype schema -- loaded neatschema from another file -- 
 		//this is just the standard neat schema type -- others can make neatjs changes that require a different schema
-        emitter.emit("schema:addSchema", self.encodingName, picbreederSchema, function(err)
+        emitter.emit("schema:addSchema", self.encodingName, iesorSchema, function(err)
         {
         	if(err){
         		done(new Error(err));

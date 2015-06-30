@@ -31,49 +31,216 @@
             "bias" : 0
         }, {
             "gid" : "4",
-            "activationFunction" : "Sine",
-            "nodeType" : "Output",
-            "layer" : 10,
+            "activationFunction" : "pbLinear",
+            "nodeType" : "Input",
+            "layer" : 0,
             "step" : 0,
             "bias" : 0
-        }, {
-            "gid" : "5",
+        },
+
+
+         {
+            "gid" : "6",
             "activationFunction" : "PBBipolarSigmoid",
             "nodeType" : "Output",
             "layer" : 10,
             "step" : 0,
             "bias" : 0
         }, {
-            "gid" : "6",
-            "activationFunction" : "Sine",
+            "gid" : "7",
+            "activationFunction" : "StepFunction",
             "nodeType" : "Output",
+            "layer" : 10,
+            "step" : 0,
+            "bias" : 0
+        }, {
+            "gid" : "8",
+            "activationFunction" : "PBBipolarSigmoid",
+            "nodeType" : "Output",
+            "layer" : 10,
+            "step" : 0,
+            "bias" : 0
+        }, {
+            "gid" : "9",
+            "activationFunction" : "PBBipolarSigmoid",
+            "nodeType" : "Output",
+            "layer" : 10,
+            "step" : 0,
+            "bias" : 0
+        }, 
+
+
+
+        {
+            "gid" : "100",
+            "activationFunction" : "PBBipolarSigmoid",
+            "nodeType" : "Hidden",
+            "layer" : 5,
+            "step" : 0,
+            "bias" : 0
+        }, {
+            "gid" : "101",
+            "activationFunction" : "PBGaussian",
+            "nodeType" : "Hidden",
+            "layer" : 2.5,
+            "step" : 0,
+            "bias" : 0
+        }, {
+            "gid" : "102",
+            "activationFunction" : "PBGaussian",
+            "nodeType" : "Hidden",
+            "layer" : 2.5,
+            "step" : 0,
+            "bias" : 0
+        }, {
+            "gid" : "110",
+            "activationFunction" : "PBBipolarSigmoid",
+            "nodeType" : "Hidden",
             "layer" : 5,
             "step" : 0,
             "bias" : 0
         }
         ],
+
         "connections" : [{
-            "gid" : "0",
-            "weight" : -2.2932328903588797,
+            "gid" : "9",
+            "weight" : 1.0,
+            "sourceID" : "0",
+            "targetID" : "6"
+        },   {
+            "gid" : "10",
+            "weight" : 1.0,
+            "sourceID" : "0",
+            "targetID" : "8"
+        }, {
+            "gid" : "11",
+            "weight" : 1.0,
+            "sourceID" : "0",
+            "targetID" : "9"
+        },   
+
+        {
+            "gid" : "12",
+            "weight" : 1.0,
+            "sourceID" : "1",
+            "targetID" : "6"
+        },   {
+            "gid" : "13",
+            "weight" : 1.0,
+            "sourceID" : "1",
+            "targetID" : "8"
+        }, {
+            "gid" : "14",
+            "weight" : 1.0,
+            "sourceID" : "1",
+            "targetID" : "9"
+        },
+
+        {
+            "gid" : "15",
+            "weight" : 1.0,
             "sourceID" : "2",
             "targetID" : "6"
         },   {
-            "gid" : "6",
-            "weight" : 1.7608415005951437,
-            "sourceID" : "6",
-            "targetID" : "4"
-        }, {
-            "gid" : "7",
-            "weight" : -1.314796165604506,
-            "sourceID" : "6",
-            "targetID" : "5"
-        },   {
-            "gid" : "22",
-            "weight" : -0.6256643214242532,
+            "gid" : "18",
+            "weight" : 1.0,
             "sourceID" : "3",
             "targetID" : "6"
+        }, {
+            "gid" : "21",
+            "weight" : 1.0,
+            "sourceID" : "4",
+            "targetID" : "6"
+        },
+
+
+
+        {
+            "gid" : "31",
+            "weight" : 0.0,
+            "sourceID" : "1",
+            "targetID" : "100"
+        },
+
+        {
+            "gid" : "32",
+            "weight" : 0.0,
+            "sourceID" : "2",
+            "targetID" : "100"
+        },   {
+            "gid" : "33",
+            "weight" : 0.0,
+            "sourceID" : "3",
+            "targetID" : "100"
+        }, {
+            "gid" : "34",
+            "weight" : 0.0,
+            "sourceID" : "4",
+            "targetID" : "100"
+        },
+
+
+        {
+            "gid" : "35",
+            "weight" : 1.0,
+            "sourceID" : "1",
+            "targetID" : "101"
+        }, {
+            "gid" : "36",
+            "weight" : -1.0,
+            "sourceID" : "3",
+            "targetID" : "101"
+        },
+
+        {
+            "gid" : "38",
+            "weight" : 1.0,
+            "sourceID" : "101",
+            "targetID" : "110"
+        },
+
+         {
+            "gid" : "40",
+            "weight" : 1.0,
+            "sourceID" : "2",
+            "targetID" : "102"
+        }, {
+            "gid" : "42",
+            "weight" : -1.0,
+            "sourceID" : "4",
+            "targetID" : "102"
+        },
+
+        {
+            "gid" : "48",
+            "weight" : 1.0,
+            "sourceID" : "102",
+            "targetID" : "110"
+        },
+
+
+         {
+            "gid" : "49",
+            "weight" : -1.7,
+            "sourceID" : "0",
+            "targetID" : "110"
+        }, {
+            "gid" : "50",
+            "weight" : -1.0,
+            "sourceID" : "100",
+            "targetID" : "7"
+        },
+
+        {
+            "gid" : "51",
+            "weight" : 1.0,
+            "sourceID" : "110",
+            "targetID" : "7"
         }
+
         ]
     },
-    "meta": {"imageTitle": "seed1", "imageTags": ["simple", "scratch"]}
+    "meta": {"iesorTitle": "seed1", "iesorTags": ["simple", "scratch"]}
 }
+
+

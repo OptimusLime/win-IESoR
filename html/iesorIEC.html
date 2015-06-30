@@ -17,6 +17,22 @@
 
 	<div id="flex" style="height:90%;"> </div>
 
+
+	<!--grab our libraries-->
+	<script type="text/javascript" src="./js/iesor/libraries/jquery-1.7.1.min.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/jquery.numeric.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/Box2d.min.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/fabric.js"></script>
+
+	<!-- load up the helper files, some might be consolidated and removed later-->
+	<script type="text/javascript" src="./js/iesor/utilities/Helpers.js"></script>
+	<script type="text/javascript" src="./js/iesor/utilities/IEC.js"></script>
+
+	<!--need to grab our physics, yo-->
+	<script type="text/javascript" src="./js/iesor/physics/boxHelpers.js"></script>
+	<script type="text/javascript" src="./js/iesor/physics/boxDrawers.js"></script>
+	<script type="text/javascript" src="./js/iesor/physics/smallestWorld.js"></script>
+
 	<!-- Now we start messing with the flex object -->
 	<script type="text/javascript">
 
@@ -48,7 +64,7 @@
 
 
 			//for now, must match the win-save name 
-			var picArtName = "picArtifact";
+			var picArtName = "iesorArtifact";
 
 
 			var traverse = require('optimuslime-traverse');
@@ -58,7 +74,7 @@
 	    	var moduleJSON = 
 			{
 				"cppn-add" : require('cppn-additions'),
-				"pbEncoding" : require('pbEncoding'),
+				"iesorEncoding" : require('iesorEncoding'),
 				"win-flexIEC" : require("win-flexIEC"),
 				"win-query" : require("win-query"),
 				"win-pub" : require("win-publish"),
@@ -70,7 +86,7 @@
 
 			var testingLogLevel = 10;
 
-			var pbConfig = require('win-picbreeder/pbConfig.json');
+			var iesorConfig = require('win-iesor/iesorConfig.json');
 
 
 			var neatjs = require('neatjs');
@@ -93,7 +109,7 @@
 			var configurations = 
 			{
 				"global" : {
-					server : pbConfig.serverRoot + (pbConfig.serverPort ? pbConfig.serverPort : "") + pbConfig.apiRoot 
+					server : iesorConfig.serverRoot + (iesorConfig.serverPort ? iesorConfig.serverPort : "") + iesorConfig.apiRoot 
 					// server : "http://winark.org/apps/win-Picbreeder"
 					// ,
 					// port: 3000
@@ -112,7 +128,7 @@
 				"win-publish" : {
 					logLevel : testingLogLevel
 				},
-				"pbEncoding" : {
+				"iesorEncoding" : {
 					logLevel : testingLogLevel
 				},
 				"win-iec" : {
@@ -188,7 +204,8 @@
 					// seeds = res;
 
 					seeds = [];
-					for(var key in res){
+					// for(var key in res){
+					for(var key=0; key < res.length; key++){
 
 						var s = res[key];
 						traverse(s).forEach(function(node)
@@ -233,8 +250,8 @@
 							individual = undefined;
 						}
 						//return;
-						var dataURL = evoIDToData[eID];
-						if(!dataURL)
+						var body = evoIDToData[eID];
+						if(!body)
 						{
 							//get our genome
 							var ng = winneat.genotypeFromJSON(individual.genome);
@@ -259,20 +276,20 @@
 
 							// onmessage({data: jobData});
 
-							//queue up this task with our webworkers, and get a callback with the dataURL
+							//queue up this task with our webworkers, and get a callback with the body
 							queue.queueJob(jobData, function(dataObject)
 							{
 								//save this info for next time
-								evoIDToData[eID] = dataObject.dataURL;
+								evoIDToData[eID] = dataObject.body;
 
 								//all done
-								finished(dataObject.dataURL);
+								finished(dataObject.body);
 							});
 						}
 						else
 						{
 							//all done!
-							finished(dataURL);
+							finished(body);
 						}
 					}
 
@@ -301,10 +318,10 @@
 
 								eDiv.innerHTML = "";
 
-								getOrCreateData(eID, parent, function(dataURL)
+								getOrCreateData(eID, parent, function(bodyDefinition)
 								{
 									//individual being created
-									eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+									// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
 
 									if(finished)
 										finished();
@@ -318,10 +335,10 @@
 
 								eDiv.innerHTML = "";
 
-								getOrCreateData(eID, individual, function(dataURL)
+								getOrCreateData(eID, individual, function(bodyDefinition)
 								{
 									//individual being created
-									eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+									// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
 
 									if(finished)
 										finished();
@@ -332,10 +349,10 @@
 							//that's all folks!
 							uiEmitter.on('publishShown', function(eID, eDiv)
 							{
-								getOrCreateData(eID, function(dataURL)
+								getOrCreateData(eID, function(bodyDefinition)
 								{
 									//individual being created
-									eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+									// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
 								});
 
 							});

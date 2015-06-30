@@ -2,10 +2,10 @@
 //let's serve our website as the win server might
 var fs = require('fs');
 var pbServer = require(__dirname + "/../winServe.js");
-var pbConfig = fs.readFileSync(__dirname + "/../pbConfig.json");
+var pbConfig = fs.readFileSync(__dirname + "/../iesorConfig.json");
 
 if(!pbConfig)
-    throw new Error("Incorrect build process: pbConfig.json not generated");
+    throw new Error("Incorrect build process: iesorConfig.json not generated");
 
 pbConfig = JSON.parse(pbConfig);
 

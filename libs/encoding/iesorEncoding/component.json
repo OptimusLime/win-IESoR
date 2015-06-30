@@ -1,0 +1,13 @@
+{
+  "name": "iesorEncoding",
+  "description": "Handles setting up iesor encoding",
+  "version": "0.0.1",
+  "dependencies": {
+  },
+  "scripts": [
+    "iesor-encoding.js",
+    "iesorSchema.js"
+  ],
+  "main": "iesor-encoding.js",
+  "license": ["MIT"]
+}

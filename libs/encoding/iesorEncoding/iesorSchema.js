@@ -11,8 +11,8 @@ module.exports = {
     }
     //some meta info about this object being stored
     ,"meta": {
-        "imageTitle": "string",
-        "imageTags": {type: "array", items: {type: "string"}}
+        "iesorTitle": "string",
+        "iesorTags": {type: "array", items: {type: "string"}}
     }
 };
 
