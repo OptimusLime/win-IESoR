@@ -35,7 +35,8 @@ boxNS.DrawingObject = function(sDrawElementName, canvasWidth, canvasHeight, scal
     {
         this.fabricCanvas = new fabric.Canvas(sDrawElementName, { renderOnAddition: false});
         this.fabricCanvas.selection = false;
-        this.backRect = new fabric.Rect({width: 8*this.canvasWidth, height: 2*this.canvasHeight, x: -4*this.canvasWidth, y:-this.canvasHeight/2}, {fill: "#000"});
+        this.backRect = new fabric.Rect({width: 8*this.canvasWidth, height: 2*this.canvasHeight, 
+            x: -4*this.canvasWidth, y:-this.canvasHeight/2, rx: 0, ry: 0}, {fill: "#000"});
 
 
         var lowerColor = '#555555';

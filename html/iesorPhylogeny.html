@@ -17,6 +17,21 @@
 	<script src="./js/libs/prettify.js"></script>
 	<script src="./js/libs/vkbeautify.beta.js"></script>
 
+	<!--grab our libraries-->
+	<script type="text/javascript" src="./js/iesor/libraries/jquery-1.7.1.min.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/jquery.numeric.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/Box2d.min.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/fabric.js"></script>
+
+	<!-- load up the helper files, some might be consolidated and removed later-->
+	<script type="text/javascript" src="./js/iesor/utilities/Helpers.js"></script>
+	<script type="text/javascript" src="./js/iesor/utilities/IEC.js"></script>
+
+	<!--need to grab our physics, yo-->
+	<script type="text/javascript" src="./js/iesor/physics/boxHelpers.js"></script>
+	<script type="text/javascript" src="./js/iesor/physics/boxDrawers.js"></script>
+	<script type="text/javascript" src="./js/iesor/physics/smallestWorld.js"></script>
+
     <!-- <link type="text/css" rel="stylesheet" href="http://mbostock.github.io/d3/talk/20110921/style.css"/> -->
     <style>
 
@@ -90,6 +105,9 @@
 
 	<!-- Now we start messing with the flex object -->
 	<script type="text/javascript">
+
+		
+
 
 		var matchRectangles = {};
 
@@ -312,7 +330,7 @@
 
 
 			//for now, must match the win-save name 
-			var picArtName = "picArtifact";
+			var picArtName = "iesorArtifact";
 			var winsetup = require('win-setup');
 			var element = require('el.js');
 
@@ -329,11 +347,11 @@
 
 			var testingLogLevel = 10;
 
-			var pbConfig = require('win-picbreeder/pbConfig.json');
+			var iesorConfig = require('win-iesor/iesorConfig.json');
 
 			var globalConfig = {
 				// staticServer:  "http://localhost:8000",
-				server : pbConfig.serverRoot + (pbConfig.serverPort ? pbConfig.serverPort : "") + pbConfig.apiRoot 
+				server : iesorConfig.serverRoot + (iesorConfig.serverPort ? iesorConfig.serverPort : "") + iesorConfig.apiRoot 
 				// server : "http://winark.org/apps/win-Picbreeder"
 				// ,
 				// port: 3000
@@ -371,7 +389,9 @@
 
 				var div = document.getElementById("d3Phylogeny");
 
-				var objSize = {width: 128, height: 128};
+				var objSize = {width: 250, height: 250};
+				var connectionWeightRange = 3.0;
+
 
 				var elementStyle = "width: " + objSize.width + "px; height: " + objSize.height + "px;";
 
@@ -388,8 +408,8 @@
 						individual = undefined;
 					}
 					//return;
-					var dataURL = evoIDToData[eID];
-					if(!dataURL)
+					var body = evoIDToData[eID];
+					if(!body)
 					{
 						//get our genome
 						var ng = winneat.genotypeFromJSON(individual.genome);
@@ -403,8 +423,11 @@
     					//job description huzzah
 						var jobData = {
 							wid: individual.wid,
-							width: objSize.width, 
-							height: objSize.height,
+							gridSize : 9,
+							useLEO: true,
+							weightRange: connectionWeightRange,
+							// width: objSize.width, 
+							// height: objSize.height,
 							nodeOrder: functionObject.nodeOrder, 
 							stringFunctions: functionObject.stringFunctions,
 							biasCount: 1, //one bias node in neat genome -- ddoy
@@ -414,26 +437,90 @@
 
 						// onmessage({data: jobData});
 
-						//queue up this task with our webworkers, and get a callback with the dataURL
+						//queue up this task with our webworkers, and get a callback with the body
 						queue.queueJob(jobData, function(dataObject)
 						{
 							//save this info for next time
-							evoIDToData[eID] = dataObject.dataURL;
+							evoIDToData[eID] = dataObject.body;
 
 							//all done
-							finished(dataObject.dataURL);
+							finished(dataObject.body);
 						});
 					}
 					else
 					{
 						//all done!
-						finished(dataURL);
+						finished(body);
 					}
 				}
 
 
 				// //individual being created
 				// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+
+				function wrapCallback(eDiv, smallWorld, refreshTime)
+				{
+					function updateSvg()
+					{
+						eDiv.innerHTML = smallWorld.drawObject.fabricCanvas.toSVG();
+
+						eDiv.children[0].style.width = objSize.width;
+						eDiv.children[0].style.height = objSize.height;
+
+						setTimeout(updateSvg, refreshTime || 2000);
+					}
+
+					updateSvg();
+				}
+
+				function bodyDivID(eID)
+				{
+					return "body-iesor-" + eID;
+				}
+
+				function addBodyToDiv(eID, bodyDefinition, eDiv)
+				{
+					var innerDivID = bodyDivID(eID);
+					//individual being created
+					// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+
+					// if(eDiv)
+						// eDiv.innerHTML = "<div id='"+innerDivID +"'/>"//src=\"" + dataURL + "\"></img>";
+
+					// console.log('Individual identifier: ', innerDivID);
+					// if(!bodyDefinition.isEmpty)
+						// console.log('Not empty body: ', bodyDefinition);
+
+					var smallWorld = addGenomeToSizedDiv(bodyDefinition, { containID: "#" +innerDivID, width: objSize.width, height: objSize.height, zombieMode: false }); 
+
+					smallWorld.startLoop();
+
+					if(eDiv)
+						wrapCallback(eDiv, smallWorld, 30);
+
+
+					// if(eDiv)
+					// {	
+					// 	var svgText = smallWorld.drawObject.fabricCanvas.toSVG({
+					// 		suppressPreamble: true,
+					// 		width: objSize.width,
+					// 		height: objSize.height,
+					// 		viewBox: {
+					// 	        // x: 80,
+					// 	        // y: 80,
+					// 	        width: objSize.width,
+					// 	        height: objSize.height
+					// 	    }
+
+					// 	});
+					// 	eDiv.innerHTML = svgText;
+
+					// 	eDiv.children[0].style.width = objSize.width;
+					// 	eDiv.children[0].style.height = objSize.height;
+					// }
+					return smallWorld;
+				}
+
 
 				var uID, flex;
 
@@ -539,22 +626,24 @@
 
 							function wrapGetDataCall(wid, artifact, imgHolder)
 							{
-								getOrCreateData(wid, artifact, function(dataURL)
+								getOrCreateData(wid, artifact, function(bodyDefinition)
 								{
 									//set the inner image
-									imgHolder.innerHTML = "<img src=\"" + dataURL + "\" ></img>";
+									// imgHolder.innerHTML = "<img id='"+wid+"'src=\"" + dataURL + "\" ></img>";
+
+									var smallWorld = addBodyToDiv(wid, bodyDefinition, imgHolder);
 
 									//woah this is nuts
-	        						var rHolder = imgHolder.parentNode.parentNode.parentNode.parentNode;
+	        						// var rHolder = imgHolder.parentNode.parentNode.parentNode.parentNode;
 
-	        						var image = document.createElement('image');
-		        					var rect = rHolder.firstChild;
+	        						// var image = document.createElement('image');
+		        					// var rect = rHolder.firstChild;
 
-	        						copyRectangle(wid, image, rect);
+	        						// copyRectangle(wid, image, rect);
 		        					
-		        					rHolder.insertBefore(image, rect);
+		        					// rHolder.insertBefore(image, rect);
 
-	        						matchRectangles[wid] = {rect: rect, image: image};
+	        						// matchRectangles[wid] = {rect: rect, image: image};
 
 								});
 							}

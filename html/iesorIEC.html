@@ -425,7 +425,8 @@
 								{
 									//individual being created
 									// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
-									var smallWorld = addBodyToDiv(eID, bodyDefinition);
+									var id = 'publish-' + eID;
+									var smallWorld = addBodyToDiv(id, bodyDefinition, eDiv);
 									smallWorld.stopLoop();
 
 								});
