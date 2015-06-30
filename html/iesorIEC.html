@@ -403,7 +403,7 @@
 					                	var smallWorld = existingSmallWorlds[eID].world;
 					                	delete smallWorld;
 
-					                	smallWorld = addBodyToDiv(eID, bodyDefinition);
+					                	smallWorld = addBodyToDiv(eID, existingSmallWorlds[eID].body);
 
 					                	existingSmallWorlds[eID] = {world: smallWorld, body: existingSmallWorlds[eID].body};
 
