@@ -180,6 +180,11 @@ function flexIEC(divValue, reqOptions)
 		self.emit("parentSelected", evoID, eDiv, pSelected(evoID));
 	}
 
+	// self.parentCreatedAfter = function(evoID, eDiv)
+	// {
+	// 	self.emit("parentSelectedAfter", evoID, eDiv);
+	// }
+
 	self.likeElement = function(e)
 	{
 		//either you  or your parent have an ID -- pull that id info
@@ -264,6 +269,7 @@ function flexIEC(divValue, reqOptions)
 	self.parentFlex = new flexparents(parentFlexDiv, reqOptions.parentOptions || {});
 
 	self.parentFlex.on('elementCreated', self.parentCreated);
+	// self.parentFlex.on('elementCreatedAfter', self.parentCreatedAfter);
 	self.parentFlex.on('elementRemoved', self.parentDeleted);
 
 

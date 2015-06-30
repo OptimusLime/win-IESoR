@@ -53,8 +53,6 @@
 
 		window.onload = function() {
 
-
-
 			//grab our webworker, we should start 7 workers
 			var WorkerQueue = require('webworker-queue');
 
@@ -62,10 +60,8 @@
 			var queue = new WorkerQueue("/js/webworkers/cppnWorkerActivation.js", totalWorkers);
 			var winneat = require('win-neat');
 
-
 			//for now, must match the win-save name 
 			var picArtName = "iesorArtifact";
-
 
 			var traverse = require('optimuslime-traverse');
 
@@ -116,8 +112,8 @@
 				},
 				"win-neat" : {
 					options : {
-						initialMutationCount : 5, 
-						postMutationCount : 5,
+						initialMutationCount : 2, 
+						postMutationCount : 2,
 						neatParameters : np
 					},
 					logLevel : testingLogLevel
@@ -152,7 +148,13 @@
 				}
 			};
 
-
+			function removeChildrenFromDiv(divID)
+			{
+				var myNode = document.getElementById(divID);
+				while (myNode.firstChild) {
+				    myNode.removeChild(myNode.firstChild);
+				}
+			}
 			var events = ["ui:initializeDisplay", "ui:ready", "query:getArtifacts", "query:getSeeds"];
 
 			winsetup(events, moduleJSON, configurations, function(err, backObject)
@@ -222,7 +224,7 @@
 
 					var div = document.getElementById("flex");
 
-					var objSize = {width: 175, height: 175};
+					var objSize = {width: 250, height: 250};
 
 					var parentSize = {width: objSize.width, height: objSize.height, columnMargin: 4}, 
 					evoSize = {width: objSize.width, height: objSize.height, rowMargin: 4, columnMargin: 4};
@@ -230,7 +232,9 @@
 					var flexOptions =  
 					{
 						parentOptions : {
-							objectSize: parentSize
+							objectSize: parentSize,
+							autoDetermineMax : false,
+							maxItemCount : 1
 						},
 						evoOptions : 
 						{
@@ -265,8 +269,11 @@
 	    					//job description huzzah
 							var jobData = {
 								wid: individual.wid,
-								width: objSize.width, 
-								height: objSize.height,
+								gridSize : 9,
+								useLEO: true,
+								weightRange: np.connectionWeightRange,
+								// width: objSize.width, 
+								// height: objSize.height,
 								nodeOrder: functionObject.nodeOrder, 
 								stringFunctions: functionObject.stringFunctions,
 								biasCount: 1, //one bias node in neat genome -- ddoy
@@ -293,7 +300,35 @@
 						}
 					}
 
+					function bodyDivID(eID)
+					{
+						return "body-iesor-" + eID;
+					}
+
+					function addBodyToDiv(eID, bodyDefinition, eDiv)
+					{
+						var innerDivID = bodyDivID(eID);
+						//individual being created
+						// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+
+						if(eDiv)
+							eDiv.innerHTML = "<div id='"+innerDivID +"'/>"//src=\"" + dataURL + "\"></img>";
+
+						// console.log('Individual identifier: ', innerDivID);
+						// if(!bodyDefinition.isEmpty)
+							// console.log('Not empty body: ', bodyDefinition);
+
+						var smallWorld = addGenomeToSizedDiv(bodyDefinition, { containID: "#" +innerDivID, width: objSize.width, height: objSize.height, zombieMode: false }); 
+
+						smallWorld.startLoop();
+
+						return smallWorld;
+					}
+
 					var uID, flex;
+
+					var existingSmallWorlds = {};
+
 					//for now we pass seed information to init display -- later, we'll move this to a more appropriate place 
 					//a module should have control over getting seeds (they are constant for a domain and hosted on the server)
 					qCallBackbone("ui:initializeDisplay", seeds, div, flexOptions)
@@ -315,13 +350,17 @@
 							{
 								backLog("final: p select div: ", eID);
 
-
-								eDiv.innerHTML = "";
+								var id = eID + "-" + parent.wid;
+								// var divID = bodyDivID(id);
+								// eDiv.innerHTML = "<div id='" + divID + "' />";
 
 								getOrCreateData(eID, parent, function(bodyDefinition)
 								{
 									//individual being created
 									// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+									
+									var smallWorld = addBodyToDiv(id, bodyDefinition, eDiv);
+									existingSmallWorlds[id] = {world: smallWorld, body: bodyDefinition};
 
 									if(finished)
 										finished();
@@ -337,14 +376,47 @@
 
 								getOrCreateData(eID, individual, function(bodyDefinition)
 								{
-									//individual being created
-									// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+								
+									var smallWorld = addBodyToDiv(eID, bodyDefinition, eDiv);
+
+									existingSmallWorlds[eID] = {world: smallWorld, body: bodyDefinition};
 
 									if(finished)
 										finished();
 								});
 								
 							});
+
+							//after it's been added, we work the visible magic
+							uiInfo.ui.evoFlex.on('elementVisibleAfter', function(eID)
+					        {
+					                console.log("Visible: ", eID);
+					                if(existingSmallWorlds[eID])
+					                {
+					                	var innerDivID = bodyDivID(eID);
+					                	removeChildrenFromDiv(innerDivID);
+
+					                	var smallWorld = existingSmallWorlds[eID].world;
+					                	delete smallWorld;
+
+					                	smallWorld = addBodyToDiv(eID, bodyDefinition);
+
+					                	existingSmallWorlds[eID] = {world: smallWorld, body: existingSmallWorlds[eID].body};
+
+					                	// existingSmallWorlds[eID].startLoop();
+					                }
+					                // element.className += "grid-cell";
+					                // eDiv.innerHTML = "<div>Vis: "+eID+"</div>";
+					        });
+
+					        uiInfo.ui.evoFlex.on('elementHidden', function(eID)
+					        {
+					                console.log("Hidden: ", eID);
+					                if(existingSmallWorlds[eID])
+					                	existingSmallWorlds[eID].world.stopLoop();
+					                // element.className += "grid-cell";
+					                // eDiv.innerHTML = "<div>Invis: "+eID+"</div>";
+					        });
 
 							//that's all folks!
 							uiEmitter.on('publishShown', function(eID, eDiv)
@@ -353,6 +425,9 @@
 								{
 									//individual being created
 									// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+									var smallWorld = addBodyToDiv(eID, bodyDefinition);
+									smallWorld.stopLoop();
+
 								});
 
 							});

@@ -35,14 +35,15 @@ onmessage = function(e){
 
 
 		//need with and height, thank you! non-zero ddoy
-		if(!wid || !funData.width || !funData.height)
-			throw new Error("No wid, width, or height provided for fixed size CPPN Activation");
+		if(!wid || !funData.gridSize || !funData.weightRange)
+			throw new Error("No wid, gridSize, or weightRange provided for fixed size CPPN body activation");
 
 		//okay, now we have our CPPN all pampered and ready to go
         // var cppnOutputs = runCPPNAcrossFixedSize(cppnFunction, {width: funData.width, height: funData.height});
 		var cppnOutputs = runCPPNAcrossFixedSize(cppnFunction, funData.gridSize, funData.useLEO, funData.weightRange);
         // activationFunction, size, useLeo, weightRange, testing
 
+        cppnOutputs.GenomeID = wid;
 		//cppn outputs to RGB Bitmap -- huzzah!
 		// var fileOutput = generateBitmap.generateBitmapDataURL(cppnOutputs);
 

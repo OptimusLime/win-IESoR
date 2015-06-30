@@ -10,6 +10,21 @@
 	<script type="text/javascript" src="./js/webworkers/cppnWorkerActivation.js"></script>
 
 
+	<!--grab our libraries-->
+	<script type="text/javascript" src="./js/iesor/libraries/jquery-1.7.1.min.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/jquery.numeric.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/Box2d.min.js"></script>
+	<script type="text/javascript" src="./js/iesor/libraries/fabric.js"></script>
+
+	<!-- load up the helper files, some might be consolidated and removed later-->
+	<script type="text/javascript" src="./js/iesor/utilities/Helpers.js"></script>
+	<script type="text/javascript" src="./js/iesor/utilities/IEC.js"></script>
+
+	<!--need to grab our physics, yo-->
+	<script type="text/javascript" src="./js/iesor/physics/boxHelpers.js"></script>
+	<script type="text/javascript" src="./js/iesor/physics/boxDrawers.js"></script>
+	<script type="text/javascript" src="./js/iesor/physics/smallestWorld.js"></script>
+
 </head>
 <body class="flexcenter">
 	<!-- <div id="buttons" style="display: inline-block;">
@@ -24,7 +39,7 @@
 
 	<!-- Now we start messing with the flex object -->
 	<script type="text/javascript">
-	console.log("Loading PBHome");
+	console.log("Loading iesorHome");
 	//this will automatically decode query string in to urlParams argument!
         var urlParams;
         (window.onpopstate = function () {
@@ -50,7 +65,7 @@
 			var queue = new WorkerQueue("/js/webworkers/cppnWorkerActivation.js", totalWorkers);
 
 			//for now, must match the win-save name 
-			var picArtName = "picArtifact";
+			var picArtName = "iesorArtifact";
 			var winsetup = require('win-setup');
 
 			var winneat = require('win-neat');
@@ -68,19 +83,22 @@
 
 			var testingLogLevel = 10;
 
-			var pbConfig = require('win-picbreeder/pbConfig.json');
+
+			var connectionWeightRange = 3.0;
+
+			var iesorConfig = require('win-iesor/iesorConfig.json');
 
 			var globalConfig = {
 				// staticServer:  "http://localhost:8000",
 
-				server : pbConfig.serverRoot + (pbConfig.serverPort ? pbConfig.serverPort : "") + pbConfig.apiRoot 
+				server : iesorConfig.serverRoot + (iesorConfig.serverPort ? iesorConfig.serverPort : "") + iesorConfig.apiRoot 
 				// "http://winark.org/apps/win-Picbreeder"
 				// ,
 				// port: 3000
 			};
 
 
-			console.log('PB Server config: ', globalConfig.server);
+			console.log('iesor Server config: ', globalConfig.server);
 
 			var configurations = 
 			{
@@ -96,7 +114,6 @@
 					logLevel : testingLogLevel
 				}
 			};
-
 
 
 			var events = ["ui:home-initializeDisplay", "ui:home-ready"];
@@ -116,17 +133,44 @@
 
 				var div = document.getElementById("home");
 
-				var objSize = {width: 175, height: 175};
+				var objSize = {width: 250, height: 250};
 
 				var flexOptions =  
 				{
-					title: "win-Picbreeder",
-					phylogenyLocation: "pbPhylogeny.html",
-					startFromScratchLocation: "pbIEC.html"
+					title: "win-IESoR",
+					phylogenyLocation: "iesorPhylogeny.html",
+					startFromScratchLocation: "iesorIEC.html"
 					// mode: 'vertical' ,
 				};
 
-				
+				function bodyDivID(eID)
+				{
+					return "body-iesor-" + eID;
+				}
+
+				function addBodyToDiv(eID, bodyDefinition, eDiv)
+				{
+					var innerDivID = bodyDivID(eID);
+					//individual being created
+					// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+
+					if(eDiv)
+						eDiv.innerHTML = "<div id='"+innerDivID +"'/>"//src=\"" + dataURL + "\"></img>";
+
+					// console.log('Individual identifier: ', innerDivID);
+					// if(!bodyDefinition.isEmpty)
+						// console.log('Not empty body: ', bodyDefinition);
+
+					var smallWorld = addGenomeToSizedDiv(bodyDefinition, { containID: "#" +innerDivID, width: objSize.width, height: objSize.height, zombieMode: false }); 
+
+					smallWorld.startLoop();
+
+					return smallWorld;
+				}
+
+
+				var existingSmallWorlds = {};
+
 				var evoIDToData = {};
 
 				function getOrCreateData(eID, individual, finished)
@@ -138,8 +182,8 @@
 						individual = undefined;
 					}
 					//return;
-					var dataURL = evoIDToData[eID];
-					if(!dataURL)
+					var body = evoIDToData[eID];
+					if(!body)
 					{
 						//get our genome
 						var ng = winneat.genotypeFromJSON(individual.genome);
@@ -153,8 +197,11 @@
     					//job description huzzah
 						var jobData = {
 							wid: individual.wid,
-							width: objSize.width, 
-							height: objSize.height,
+							gridSize : 9,
+							useLEO: true,
+							weightRange: connectionWeightRange,
+							// width: objSize.width, 
+							// height: objSize.height,
 							nodeOrder: functionObject.nodeOrder, 
 							stringFunctions: functionObject.stringFunctions,
 							biasCount: 1, //one bias node in neat genome -- ddoy
@@ -164,20 +211,20 @@
 
 						// onmessage({data: jobData});
 
-						//queue up this task with our webworkers, and get a callback with the dataURL
+						//queue up this task with our webworkers, and get a callback with the body
 						queue.queueJob(jobData, function(dataObject)
 						{
 							//save this info for next time
-							evoIDToData[eID] = dataObject.dataURL;
+							evoIDToData[eID] = dataObject.body;
 
 							//all done
-							finished(dataObject.dataURL);
+							finished(dataObject.body);
 						});
 					}
 					else
 					{
 						//all done!
-						finished(dataURL);
+						finished(body);
 					}
 				}
 
@@ -203,10 +250,13 @@
 						uiEmitter.on('elementCreated', function(wid, artifact, eDiv, finished)
 						{
 							
-							getOrCreateData(wid, artifact, function(dataURL)
+							getOrCreateData(wid, artifact, function(bodyDefinition)
 							{
 								//individual being created
-								eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+								// eDiv.innerHTML = "<img src=\"" + dataURL + "\"></img>";
+								var id = "body-" + wid;
+								var smallWorld = addBodyToDiv(id, bodyDefinition, eDiv);
+								existingSmallWorlds[id] = {world: smallWorld, body: bodyDefinition};
 
 								// backLog("final: p createive indiv: ", eID, " div: ", eDiv, " indvi: ", individual, " fins: ", finished);
 								backLog("Individual: ", artifact);
@@ -223,7 +273,7 @@
 						{
 							backLog("Branch artifact: ", wid, "art: ", artifact);
 
-							var branchLocation = pbConfig.apiRoot + "/pbIEC.html?branch=" + wid;
+							var branchLocation = iesorConfig.apiRoot + "/iesorIEC.html?branch=" + wid;
 							window.location.href = branchLocation;
 
 						})

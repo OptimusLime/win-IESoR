@@ -117,6 +117,14 @@ function winflex(backbone, globalConfig, localConfig)
 			 });
 		});
 
+		// //a parent was selected by flex
+		// nf.on('parentSelectedAfter', function(eID, eDiv, finished)
+		// {
+		//  	//now we use this info and pass it along for other ui business we don't care about
+		//  	//emit for further behavior -- must be satisfied or loading never ends hehehe
+		//  	uiEmitter.emit('parentSelectedAfter', eID, eDiv, finished);
+		// });
+
 		//parent is no longer rocking it. Sorry to say. 
 		nf.on('parentUnselected', function(eID)
 		{

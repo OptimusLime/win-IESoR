@@ -172,7 +172,10 @@ function flexstatic(divValue, reqOptions)
 				//replace the children of our container
 				flexInner.replaceChild(el, flexInner.children[i-itemStart]);
 			else
-				flexInner.appendChild(el);	
+				flexInner.appendChild(el);
+
+			self.emit('elementVisibleAfter', externalID(i));
+
 		}
 
 		self.removeExcessChildren();
@@ -201,11 +204,12 @@ function flexstatic(divValue, reqOptions)
 		for(var i=itemStart; i < itemStart + maxIPP; i++)
 		{
 			var el = htmlObjects[i];
-			
+			var newlyVisible = false;
 			//we already made this object
 			if(el)
 			{
 				self.emit('elementVisible', externalID(i), el);
+				newlyVisible = true;
 			}
 			else
 			{
@@ -217,9 +221,19 @@ function flexstatic(divValue, reqOptions)
 				flexInner.replaceChild(el, flexInner.children[i-itemStart]);
 			else
 				flexInner.appendChild(el);	
+
+			//we want to know AFTER the dom change has been made
+			if(newlyVisible)
+				self.emit('elementVisibleAfter', externalID(i), el);
+
 		}
 
 		self.removeExcessChildren();
+
+		for(var i= itemStart; i < itemStart + itemsOnScreen; i++)
+		{
+			self.emit('elementHiddenAfter', externalID(i), htmlObjects[i]);
+		}
 	}
 
 	var objectIDToUID = function(idCount)

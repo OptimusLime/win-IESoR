@@ -101,7 +101,6 @@ function parentList(divValue, reqOptions)
 		htmlObjects[i] = el;
 		dataObjects[i] = data;
 		activeElements++;
-		self.emit('elementCreated', data, i, el);
 		return el;
 	}
 
@@ -124,6 +123,12 @@ function parentList(divValue, reqOptions)
 			outerContainer.insertBefore(el, outerContainer.firstChild);
 		else //otherwise we're appending the object
 			outerContainer.append(el);
+
+		//call AFTER the swap please
+		self.emit('elementCreated', data, newID, el);
+
+		// self.emit('elementCreatedAfter', newID, el);
+
 	}
 	self.removeOldest = function()
 	{
