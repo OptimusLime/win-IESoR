@@ -62,7 +62,12 @@
 			var WorkerQueue = require('webworker-queue');
 
 			var totalWorkers = 8;
-			var queue = new WorkerQueue("/js/webworkers/cppnWorkerActivation.js", totalWorkers);
+
+			var iesorConfig = require('win-iesor/iesorConfig.json');
+
+			var serverRoot = iesorConfig.serverRoot + (iesorConfig.serverPort ? iesorConfig.serverPort : "") + iesorConfig.apiRoot;
+            var queue = new WorkerQueue(serverRoot + "/js/webworkers/cppnWorkerActivation.js", totalWorkers);  
+			// var queue = new WorkerQueue("/js/webworkers/cppnWorkerActivation.js", totalWorkers);
 
 			//for now, must match the win-save name 
 			var picArtName = "iesorArtifact";
@@ -86,7 +91,7 @@
 
 			var connectionWeightRange = 3.0;
 
-			var iesorConfig = require('win-iesor/iesorConfig.json');
+			// var iesorConfig = require('win-iesor/iesorConfig.json');
 
 			var globalConfig = {
 				// staticServer:  "http://localhost:8000",

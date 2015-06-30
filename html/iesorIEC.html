@@ -57,7 +57,12 @@
 			var WorkerQueue = require('webworker-queue');
 
 			var totalWorkers = 8;
-			var queue = new WorkerQueue("/js/webworkers/cppnWorkerActivation.js", totalWorkers);
+
+			var iesorConfig = require('win-iesor/iesorConfig.json');
+
+			var serverRoot = iesorConfig.serverRoot + (iesorConfig.serverPort ? iesorConfig.serverPort : "") + iesorConfig.apiRoot;
+            var queue = new WorkerQueue(serverRoot + "/js/webworkers/cppnWorkerActivation.js", totalWorkers);           
+			// var queue = new WorkerQueue("/js/webworkers/cppnWorkerActivation.js", totalWorkers);
 			var winneat = require('win-neat');
 
 			//for now, must match the win-save name 
@@ -82,7 +87,6 @@
 
 			var testingLogLevel = 10;
 
-			var iesorConfig = require('win-iesor/iesorConfig.json');
 
 
 			var neatjs = require('neatjs');
