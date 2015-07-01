@@ -12,12 +12,12 @@
 	width: 100%;
 }
 
-.og-grid li {
+/*.og-grid li {
 	display: inline-block;
 	margin: 10px 5px 0 5px;
 	vertical-align: top;
 	height: 350px;
-}
+}*/
 
 .og-grid li > a,
 .og-grid li > a img {
@@ -245,7 +245,7 @@ html { height: 100%; }
 	display: inline-block;
 	margin: 10px 5px 0 5px;
 	vertical-align: top;
-	height: 250px;
+	height: 350px;
 }
 
 .og-grid li > a,

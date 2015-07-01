@@ -1064,6 +1064,1512 @@ require.modules["optimuslime~traverse"] = require.modules["optimuslime~traverse@
 require.modules["traverse"] = require.modules["optimuslime~traverse@0.6.6-1"];
 
 
+require.register("optimuslime~el.js@master", function (exports, module) {
+/**
+* el.js v0.3 - A JavaScript Node Creation Tool
+*
+* https://github.com/markgandolfo/el.js
+*
+* Copyright 2013 Mark Gandolfo and other contributors
+* Released under the MIT license.
+* http://en.wikipedia.org/wiki/MIT_License
+*/
+
+module.exports = el;
+
+function el(tagName, attrs, child) {
+  // Pattern to match id & class names
+  var pattern = /([a-z]+|#[\w-\d]+|\.[\w\d-]+)/g
+
+  if(arguments.length === 2) {
+    if(attrs instanceof Array
+    || typeof attrs === 'function'
+    || typeof attrs === 'string'
+    || attrs.constructor !== Object
+    ) {
+      child = attrs;
+      attrs = undefined;
+    }
+
+  }
+  // does the user pass attributes in, if not set an empty object up
+  attrs = typeof attrs !== 'undefined' ? attrs : {};
+  child = typeof child !== 'undefined' ? child : [];
+  child = child instanceof Array ? child : [child];
+
+  // run the pattern over the tagname an attempt to pull out class & id attributes
+  // shift the first record out as it's the element name
+  matched = tagName.match(pattern);
+  tagName = matched[0];
+  matched.shift();
+
+  // Iterate over the matches and concat the attrs to either class or id keys in attrs json object
+  for (var m in matched) {
+    if(matched[m][0] == '.') {
+      if(attrs['class'] == undefined) {
+        attrs['class'] = matched[m].substring(1, matched[m].length);
+      } else {
+        attrs['class'] = attrs['class'] + ' ' + matched[m].substring(1, matched[m].length);
+      }
+    } else if(matched[m][0] == '#') {
+      if(attrs['id'] == undefined) {
+        attrs['id'] = matched[m].substring(1, matched[m].length)
+      } else {
+        // Feels dirty having multiple id's, but it's allowed: http://www.w3.org/TR/selectors/#id-selectors
+        attrs['id'] = attrs['id'] + ' ' + matched[m].substring(1, matched[m].length);
+      }
+    }
+  }
+
+  //A little helper: if your attrs includes style object
+  //we turn the style object into a style string for direct application
+  if(typeof attrs["style"] != "string" && typeof attrs["style"] == "object")
+  {
+    var styleObj = attrs["style"];
+    //we build the string
+    var concat = "";
+
+    //for each style object
+    for(var key in styleObj) 
+      //concat the key + value with : inbetween (e.g. width: 100px;)
+      concat += (key + ": " + styleObj[key] + "; ");
+
+    //grab the concatenated style string
+    attrs["style"] = concat; 
+  }
+
+
+  // create the element
+  var element = document.createElement(tagName);
+  for(var i = 0; i < child.length; i += 1) {
+    (function(child){
+      switch(typeof child) {
+        case 'object':
+          element.appendChild(child);
+          break;
+        case 'function':
+          var discardDoneCallbackResult = false;
+          var doneCallback = function doneCallback(content) {
+            if (!discardDoneCallbackResult) {
+              element.appendChild(content);
+            }
+          }
+          var result = child.apply(null, [doneCallback])
+          if(typeof result != 'undefined') {
+            discardDoneCallbackResult = true;
+            element.appendChild(result);
+          }
+          break;
+        case 'string':
+          element.appendChild(document.createTextNode(child));
+        default:
+          //???
+      }
+    }(child[i]));
+
+  }
+
+  for (var key in attrs) {
+    if (attrs.hasOwnProperty(key)) {
+      element.setAttribute(key, attrs[key]);
+    }
+  }
+
+  return element;
+};
+
+// alias
+el.create = el.c = el;
+
+// vanity methods
+el.img = function(attrs) {
+  return el.create('img', attrs);
+};
+
+el.a = function(attrs, child) {
+  return el.create('a', attrs, child);
+};
+
+el.div = function(attrs, child) {
+  return el.create('div', attrs, child);
+};
+
+el.p = function(attrs, child) {
+  return el.create('p', attrs, child);
+};
+
+el.input = function(attrs, child) {
+  return el.create('input', attrs);
+};
+
+});
+
+require.modules["optimuslime-el.js"] = require.modules["optimuslime~el.js@master"];
+require.modules["optimuslime~el.js"] = require.modules["optimuslime~el.js@master"];
+require.modules["el.js"] = require.modules["optimuslime~el.js@master"];
+
+
+require.register("component~reduce@1.0.1", function (exports, module) {
+
+/**
+ * Reduce `arr` with `fn`.
+ *
+ * @param {Array} arr
+ * @param {Function} fn
+ * @param {Mixed} initial
+ *
+ * TODO: combatible error handling?
+ */
+
+module.exports = function(arr, fn, initial){  
+  var idx = 0;
+  var len = arr.length;
+  var curr = arguments.length == 3
+    ? initial
+    : arr[idx++];
+
+  while (idx < len) {
+    curr = fn.call(null, curr, arr[idx], ++idx, arr);
+  }
+  
+  return curr;
+};
+});
+
+require.modules["component-reduce"] = require.modules["component~reduce@1.0.1"];
+require.modules["component~reduce"] = require.modules["component~reduce@1.0.1"];
+require.modules["reduce"] = require.modules["component~reduce@1.0.1"];
+
+
+require.register("visionmedia~superagent@master", function (exports, module) {
+/**
+ * Module dependencies.
+ */
+
+var Emitter = require('component~emitter@master');
+var reduce = require('component~reduce@1.0.1');
+
+/**
+ * Root reference for iframes.
+ */
+
+var root = 'undefined' == typeof window
+  ? (this || self)
+  : window;
+
+/**
+ * Noop.
+ */
+
+function noop(){};
+
+/**
+ * Check if `obj` is a host object,
+ * we don't want to serialize these :)
+ *
+ * TODO: future proof, move to compoent land
+ *
+ * @param {Object} obj
+ * @return {Boolean}
+ * @api private
+ */
+
+function isHost(obj) {
+  var str = {}.toString.call(obj);
+
+  switch (str) {
+    case '[object File]':
+    case '[object Blob]':
+    case '[object FormData]':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Determine XHR.
+ */
+
+request.getXHR = function () {
+  if (root.XMLHttpRequest
+      && (!root.location || 'file:' != root.location.protocol
+          || !root.ActiveXObject)) {
+    return new XMLHttpRequest;
+  } else {
+    try { return new ActiveXObject('Microsoft.XMLHTTP'); } catch(e) {}
+    try { return new ActiveXObject('Msxml2.XMLHTTP.6.0'); } catch(e) {}
+    try { return new ActiveXObject('Msxml2.XMLHTTP.3.0'); } catch(e) {}
+    try { return new ActiveXObject('Msxml2.XMLHTTP'); } catch(e) {}
+  }
+  return false;
+};
+
+/**
+ * Removes leading and trailing whitespace, added to support IE.
+ *
+ * @param {String} s
+ * @return {String}
+ * @api private
+ */
+
+var trim = ''.trim
+  ? function(s) { return s.trim(); }
+  : function(s) { return s.replace(/(^\s*|\s*$)/g, ''); };
+
+/**
+ * Check if `obj` is an object.
+ *
+ * @param {Object} obj
+ * @return {Boolean}
+ * @api private
+ */
+
+function isObject(obj) {
+  return obj === Object(obj);
+}
+
+/**
+ * Serialize the given `obj`.
+ *
+ * @param {Object} obj
+ * @return {String}
+ * @api private
+ */
+
+function serialize(obj) {
+  if (!isObject(obj)) return obj;
+  var pairs = [];
+  for (var key in obj) {
+    if (null != obj[key]) {
+      pairs.push(encodeURIComponent(key)
+        + '=' + encodeURIComponent(obj[key]));
+    }
+  }
+  return pairs.join('&');
+}
+
+/**
+ * Expose serialization method.
+ */
+
+ request.serializeObject = serialize;
+
+ /**
+  * Parse the given x-www-form-urlencoded `str`.
+  *
+  * @param {String} str
+  * @return {Object}
+  * @api private
+  */
+
+function parseString(str) {
+  var obj = {};
+  var pairs = str.split('&');
+  var parts;
+  var pair;
+
+  for (var i = 0, len = pairs.length; i < len; ++i) {
+    pair = pairs[i];
+    parts = pair.split('=');
+    obj[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);
+  }
+
+  return obj;
+}
+
+/**
+ * Expose parser.
+ */
+
+request.parseString = parseString;
+
+/**
+ * Default MIME type map.
+ *
+ *     superagent.types.xml = 'application/xml';
+ *
+ */
+
+request.types = {
+  html: 'text/html',
+  json: 'application/json',
+  xml: 'application/xml',
+  urlencoded: 'application/x-www-form-urlencoded',
+  'form': 'application/x-www-form-urlencoded',
+  'form-data': 'application/x-www-form-urlencoded'
+};
+
+/**
+ * Default serialization map.
+ *
+ *     superagent.serialize['application/xml'] = function(obj){
+ *       return 'generated xml here';
+ *     };
+ *
+ */
+
+ request.serialize = {
+   'application/x-www-form-urlencoded': serialize,
+   'application/json': JSON.stringify
+ };
+
+ /**
+  * Default parsers.
+  *
+  *     superagent.parse['application/xml'] = function(str){
+  *       return { object parsed from str };
+  *     };
+  *
+  */
+
+request.parse = {
+  'application/x-www-form-urlencoded': parseString,
+  'application/json': JSON.parse
+};
+
+/**
+ * Parse the given header `str` into
+ * an object containing the mapped fields.
+ *
+ * @param {String} str
+ * @return {Object}
+ * @api private
+ */
+
+function parseHeader(str) {
+  var lines = str.split(/\r?\n/);
+  var fields = {};
+  var index;
+  var line;
+  var field;
+  var val;
+
+  lines.pop(); // trailing CRLF
+
+  for (var i = 0, len = lines.length; i < len; ++i) {
+    line = lines[i];
+    index = line.indexOf(':');
+    field = line.slice(0, index).toLowerCase();
+    val = trim(line.slice(index + 1));
+    fields[field] = val;
+  }
+
+  return fields;
+}
+
+/**
+ * Return the mime type for the given `str`.
+ *
+ * @param {String} str
+ * @return {String}
+ * @api private
+ */
+
+function type(str){
+  return str.split(/ *; */).shift();
+};
+
+/**
+ * Return header field parameters.
+ *
+ * @param {String} str
+ * @return {Object}
+ * @api private
+ */
+
+function params(str){
+  return reduce(str.split(/ *; */), function(obj, str){
+    var parts = str.split(/ *= */)
+      , key = parts.shift()
+      , val = parts.shift();
+
+    if (key && val) obj[key] = val;
+    return obj;
+  }, {});
+};
+
+/**
+ * Initialize a new `Response` with the given `xhr`.
+ *
+ *  - set flags (.ok, .error, etc)
+ *  - parse header
+ *
+ * Examples:
+ *
+ *  Aliasing `superagent` as `request` is nice:
+ *
+ *      request = superagent;
+ *
+ *  We can use the promise-like API, or pass callbacks:
+ *
+ *      request.get('/').end(function(res){});
+ *      request.get('/', function(res){});
+ *
+ *  Sending data can be chained:
+ *
+ *      request
+ *        .post('/user')
+ *        .send({ name: 'tj' })
+ *        .end(function(res){});
+ *
+ *  Or passed to `.send()`:
+ *
+ *      request
+ *        .post('/user')
+ *        .send({ name: 'tj' }, function(res){});
+ *
+ *  Or passed to `.post()`:
+ *
+ *      request
+ *        .post('/user', { name: 'tj' })
+ *        .end(function(res){});
+ *
+ * Or further reduced to a single call for simple cases:
+ *
+ *      request
+ *        .post('/user', { name: 'tj' }, function(res){});
+ *
+ * @param {XMLHTTPRequest} xhr
+ * @param {Object} options
+ * @api private
+ */
+
+function Response(req, options) {
+  options = options || {};
+  this.req = req;
+  this.xhr = this.req.xhr;
+  // responseText is accessible only if responseType is '' or 'text' and on older browsers
+  this.text = ((this.req.method !='HEAD' && (this.xhr.responseType === '' || this.xhr.responseType === 'text')) || typeof this.xhr.responseType === 'undefined')
+     ? this.xhr.responseText
+     : null;
+  this.statusText = this.req.xhr.statusText;
+  this.setStatusProperties(this.xhr.status);
+  this.header = this.headers = parseHeader(this.xhr.getAllResponseHeaders());
+  // getAllResponseHeaders sometimes falsely returns "" for CORS requests, but
+  // getResponseHeader still works. so we get content-type even if getting
+  // other headers fails.
+  this.header['content-type'] = this.xhr.getResponseHeader('content-type');
+  this.setHeaderProperties(this.header);
+  this.body = this.req.method != 'HEAD'
+    ? this.parseBody(this.text ? this.text : this.xhr.response)
+    : null;
+}
+
+/**
+ * Get case-insensitive `field` value.
+ *
+ * @param {String} field
+ * @return {String}
+ * @api public
+ */
+
+Response.prototype.get = function(field){
+  return this.header[field.toLowerCase()];
+};
+
+/**
+ * Set header related properties:
+ *
+ *   - `.type` the content type without params
+ *
+ * A response of "Content-Type: text/plain; charset=utf-8"
+ * will provide you with a `.type` of "text/plain".
+ *
+ * @param {Object} header
+ * @api private
+ */
+
+Response.prototype.setHeaderProperties = function(header){
+  // content-type
+  var ct = this.header['content-type'] || '';
+  this.type = type(ct);
+
+  // params
+  var obj = params(ct);
+  for (var key in obj) this[key] = obj[key];
+};
+
+/**
+ * Parse the given body `str`.
+ *
+ * Used for auto-parsing of bodies. Parsers
+ * are defined on the `superagent.parse` object.
+ *
+ * @param {String} str
+ * @return {Mixed}
+ * @api private
+ */
+
+Response.prototype.parseBody = function(str){
+  var parse = request.parse[this.type];
+  return parse && str && (str.length || str instanceof Object)
+    ? parse(str)
+    : null;
+};
+
+/**
+ * Set flags such as `.ok` based on `status`.
+ *
+ * For example a 2xx response will give you a `.ok` of __true__
+ * whereas 5xx will be __false__ and `.error` will be __true__. The
+ * `.clientError` and `.serverError` are also available to be more
+ * specific, and `.statusType` is the class of error ranging from 1..5
+ * sometimes useful for mapping respond colors etc.
+ *
+ * "sugar" properties are also defined for common cases. Currently providing:
+ *
+ *   - .noContent
+ *   - .badRequest
+ *   - .unauthorized
+ *   - .notAcceptable
+ *   - .notFound
+ *
+ * @param {Number} status
+ * @api private
+ */
+
+Response.prototype.setStatusProperties = function(status){
+  // handle IE9 bug: http://stackoverflow.com/questions/10046972/msie-returns-status-code-of-1223-for-ajax-request
+  if (status === 1223) {
+    status = 204;
+  }
+
+  var type = status / 100 | 0;
+
+  // status / class
+  this.status = status;
+  this.statusType = type;
+
+  // basics
+  this.info = 1 == type;
+  this.ok = 2 == type;
+  this.clientError = 4 == type;
+  this.serverError = 5 == type;
+  this.error = (4 == type || 5 == type)
+    ? this.toError()
+    : false;
+
+  // sugar
+  this.accepted = 202 == status;
+  this.noContent = 204 == status;
+  this.badRequest = 400 == status;
+  this.unauthorized = 401 == status;
+  this.notAcceptable = 406 == status;
+  this.notFound = 404 == status;
+  this.forbidden = 403 == status;
+};
+
+/**
+ * Return an `Error` representative of this response.
+ *
+ * @return {Error}
+ * @api public
+ */
+
+Response.prototype.toError = function(){
+  var req = this.req;
+  var method = req.method;
+  var url = req.url;
+
+  var msg = 'cannot ' + method + ' ' + url + ' (' + this.status + ')';
+  var err = new Error(msg);
+  err.status = this.status;
+  err.method = method;
+  err.url = url;
+
+  return err;
+};
+
+/**
+ * Expose `Response`.
+ */
+
+request.Response = Response;
+
+/**
+ * Initialize a new `Request` with the given `method` and `url`.
+ *
+ * @param {String} method
+ * @param {String} url
+ * @api public
+ */
+
+function Request(method, url) {
+  var self = this;
+  Emitter.call(this);
+  this._query = this._query || [];
+  this.method = method;
+  this.url = url;
+  this.header = {};
+  this._header = {};
+  this.on('end', function(){
+    var err = null;
+    var res = null;
+
+    try {
+      res = new Response(self);
+    } catch(e) {
+      err = new Error('Parser is unable to parse the response');
+      err.parse = true;
+      err.original = e;
+      return self.callback(err);
+    }
+
+    self.emit('response', res);
+
+    if (err) {
+      return self.callback(err, res);
+    }
+
+    if (res.status >= 200 && res.status < 300) {
+      return self.callback(err, res);
+    }
+
+    var new_err = new Error(res.statusText || 'Unsuccessful HTTP response');
+    new_err.original = err;
+    new_err.response = res;
+    new_err.status = res.status;
+
+    self.callback(err || new_err, res);
+  });
+}
+
+/**
+ * Mixin `Emitter`.
+ */
+
+Emitter(Request.prototype);
+
+/**
+ * Allow for extension
+ */
+
+Request.prototype.use = function(fn) {
+  fn(this);
+  return this;
+}
+
+/**
+ * Set timeout to `ms`.
+ *
+ * @param {Number} ms
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.timeout = function(ms){
+  this._timeout = ms;
+  return this;
+};
+
+/**
+ * Clear previous timeout.
+ *
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.clearTimeout = function(){
+  this._timeout = 0;
+  clearTimeout(this._timer);
+  return this;
+};
+
+/**
+ * Abort the request, and clear potential timeout.
+ *
+ * @return {Request}
+ * @api public
+ */
+
+Request.prototype.abort = function(){
+  if (this.aborted) return;
+  this.aborted = true;
+  this.xhr.abort();
+  this.clearTimeout();
+  this.emit('abort');
+  return this;
+};
+
+/**
+ * Set header `field` to `val`, or multiple fields with one object.
+ *
+ * Examples:
+ *
+ *      req.get('/')
+ *        .set('Accept', 'application/json')
+ *        .set('X-API-Key', 'foobar')
+ *        .end(callback);
+ *
+ *      req.get('/')
+ *        .set({ Accept: 'application/json', 'X-API-Key': 'foobar' })
+ *        .end(callback);
+ *
+ * @param {String|Object} field
+ * @param {String} val
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.set = function(field, val){
+  if (isObject(field)) {
+    for (var key in field) {
+      this.set(key, field[key]);
+    }
+    return this;
+  }
+  this._header[field.toLowerCase()] = val;
+  this.header[field] = val;
+  return this;
+};
+
+/**
+ * Remove header `field`.
+ *
+ * Example:
+ *
+ *      req.get('/')
+ *        .unset('User-Agent')
+ *        .end(callback);
+ *
+ * @param {String} field
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.unset = function(field){
+  delete this._header[field.toLowerCase()];
+  delete this.header[field];
+  return this;
+};
+
+/**
+ * Get case-insensitive header `field` value.
+ *
+ * @param {String} field
+ * @return {String}
+ * @api private
+ */
+
+Request.prototype.getHeader = function(field){
+  return this._header[field.toLowerCase()];
+};
+
+/**
+ * Set Content-Type to `type`, mapping values from `request.types`.
+ *
+ * Examples:
+ *
+ *      superagent.types.xml = 'application/xml';
+ *
+ *      request.post('/')
+ *        .type('xml')
+ *        .send(xmlstring)
+ *        .end(callback);
+ *
+ *      request.post('/')
+ *        .type('application/xml')
+ *        .send(xmlstring)
+ *        .end(callback);
+ *
+ * @param {String} type
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.type = function(type){
+  this.set('Content-Type', request.types[type] || type);
+  return this;
+};
+
+/**
+ * Set Accept to `type`, mapping values from `request.types`.
+ *
+ * Examples:
+ *
+ *      superagent.types.json = 'application/json';
+ *
+ *      request.get('/agent')
+ *        .accept('json')
+ *        .end(callback);
+ *
+ *      request.get('/agent')
+ *        .accept('application/json')
+ *        .end(callback);
+ *
+ * @param {String} accept
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.accept = function(type){
+  this.set('Accept', request.types[type] || type);
+  return this;
+};
+
+/**
+ * Set Authorization field value with `user` and `pass`.
+ *
+ * @param {String} user
+ * @param {String} pass
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.auth = function(user, pass){
+  var str = btoa(user + ':' + pass);
+  this.set('Authorization', 'Basic ' + str);
+  return this;
+};
+
+/**
+* Add query-string `val`.
+*
+* Examples:
+*
+*   request.get('/shoes')
+*     .query('size=10')
+*     .query({ color: 'blue' })
+*
+* @param {Object|String} val
+* @return {Request} for chaining
+* @api public
+*/
+
+Request.prototype.query = function(val){
+  if ('string' != typeof val) val = serialize(val);
+  if (val) this._query.push(val);
+  return this;
+};
+
+/**
+ * Write the field `name` and `val` for "multipart/form-data"
+ * request bodies.
+ *
+ * ``` js
+ * request.post('/upload')
+ *   .field('foo', 'bar')
+ *   .end(callback);
+ * ```
+ *
+ * @param {String} name
+ * @param {String|Blob|File} val
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.field = function(name, val){
+  if (!this._formData) this._formData = new root.FormData();
+  this._formData.append(name, val);
+  return this;
+};
+
+/**
+ * Queue the given `file` as an attachment to the specified `field`,
+ * with optional `filename`.
+ *
+ * ``` js
+ * request.post('/upload')
+ *   .attach(new Blob(['<a id="a"><b id="b">hey!</b></a>'], { type: "text/html"}))
+ *   .end(callback);
+ * ```
+ *
+ * @param {String} field
+ * @param {Blob|File} file
+ * @param {String} filename
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.attach = function(field, file, filename){
+  if (!this._formData) this._formData = new root.FormData();
+  this._formData.append(field, file, filename);
+  return this;
+};
+
+/**
+ * Send `data`, defaulting the `.type()` to "json" when
+ * an object is given.
+ *
+ * Examples:
+ *
+ *       // querystring
+ *       request.get('/search')
+ *         .end(callback)
+ *
+ *       // multiple data "writes"
+ *       request.get('/search')
+ *         .send({ search: 'query' })
+ *         .send({ range: '1..5' })
+ *         .send({ order: 'desc' })
+ *         .end(callback)
+ *
+ *       // manual json
+ *       request.post('/user')
+ *         .type('json')
+ *         .send('{"name":"tj"})
+ *         .end(callback)
+ *
+ *       // auto json
+ *       request.post('/user')
+ *         .send({ name: 'tj' })
+ *         .end(callback)
+ *
+ *       // manual x-www-form-urlencoded
+ *       request.post('/user')
+ *         .type('form')
+ *         .send('name=tj')
+ *         .end(callback)
+ *
+ *       // auto x-www-form-urlencoded
+ *       request.post('/user')
+ *         .type('form')
+ *         .send({ name: 'tj' })
+ *         .end(callback)
+ *
+ *       // defaults to x-www-form-urlencoded
+  *      request.post('/user')
+  *        .send('name=tobi')
+  *        .send('species=ferret')
+  *        .end(callback)
+ *
+ * @param {String|Object} data
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.send = function(data){
+  var obj = isObject(data);
+  var type = this.getHeader('Content-Type');
+
+  // merge
+  if (obj && isObject(this._data)) {
+    for (var key in data) {
+      this._data[key] = data[key];
+    }
+  } else if ('string' == typeof data) {
+    if (!type) this.type('form');
+    type = this.getHeader('Content-Type');
+    if ('application/x-www-form-urlencoded' == type) {
+      this._data = this._data
+        ? this._data + '&' + data
+        : data;
+    } else {
+      this._data = (this._data || '') + data;
+    }
+  } else {
+    this._data = data;
+  }
+
+  if (!obj || isHost(data)) return this;
+  if (!type) this.type('json');
+  return this;
+};
+
+/**
+ * Invoke the callback with `err` and `res`
+ * and handle arity check.
+ *
+ * @param {Error} err
+ * @param {Response} res
+ * @api private
+ */
+
+Request.prototype.callback = function(err, res){
+  var fn = this._callback;
+  this.clearTimeout();
+  fn(err, res);
+};
+
+/**
+ * Invoke callback with x-domain error.
+ *
+ * @api private
+ */
+
+Request.prototype.crossDomainError = function(){
+  var err = new Error('Origin is not allowed by Access-Control-Allow-Origin');
+  err.crossDomain = true;
+  this.callback(err);
+};
+
+/**
+ * Invoke callback with timeout error.
+ *
+ * @api private
+ */
+
+Request.prototype.timeoutError = function(){
+  var timeout = this._timeout;
+  var err = new Error('timeout of ' + timeout + 'ms exceeded');
+  err.timeout = timeout;
+  this.callback(err);
+};
+
+/**
+ * Enable transmission of cookies with x-domain requests.
+ *
+ * Note that for this to work the origin must not be
+ * using "Access-Control-Allow-Origin" with a wildcard,
+ * and also must set "Access-Control-Allow-Credentials"
+ * to "true".
+ *
+ * @api public
+ */
+
+Request.prototype.withCredentials = function(){
+  this._withCredentials = true;
+  return this;
+};
+
+/**
+ * Initiate request, invoking callback `fn(res)`
+ * with an instanceof `Response`.
+ *
+ * @param {Function} fn
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.end = function(fn){
+  var self = this;
+  var xhr = this.xhr = request.getXHR();
+  var query = this._query.join('&');
+  var timeout = this._timeout;
+  var data = this._formData || this._data;
+
+  // store callback
+  this._callback = fn || noop;
+
+  // state change
+  xhr.onreadystatechange = function(){
+    if (4 != xhr.readyState) return;
+
+    // In IE9, reads to any property (e.g. status) off of an aborted XHR will
+    // result in the error "Could not complete the operation due to error c00c023f"
+    var status;
+    try { status = xhr.status } catch(e) { status = 0; }
+
+    if (0 == status) {
+      if (self.timedout) return self.timeoutError();
+      if (self.aborted) return;
+      return self.crossDomainError();
+    }
+    self.emit('end');
+  };
+
+  // progress
+  var handleProgress = function(e){
+    if (e.total > 0) {
+      e.percent = e.loaded / e.total * 100;
+    }
+    self.emit('progress', e);
+  };
+  if (this.hasListeners('progress')) {
+    xhr.onprogress = handleProgress;
+  }
+  try {
+    if (xhr.upload && this.hasListeners('progress')) {
+      xhr.upload.onprogress = handleProgress;
+    }
+  } catch(e) {
+    // Accessing xhr.upload fails in IE from a web worker, so just pretend it doesn't exist.
+    // Reported here:
+    // https://connect.microsoft.com/IE/feedback/details/837245/xmlhttprequest-upload-throws-invalid-argument-when-used-from-web-worker-context
+  }
+
+  // timeout
+  if (timeout && !this._timer) {
+    this._timer = setTimeout(function(){
+      self.timedout = true;
+      self.abort();
+    }, timeout);
+  }
+
+  // querystring
+  if (query) {
+    query = request.serializeObject(query);
+    this.url += ~this.url.indexOf('?')
+      ? '&' + query
+      : '?' + query;
+  }
+
+  // initiate request
+  xhr.open(this.method, this.url, true);
+
+  // CORS
+  if (this._withCredentials) xhr.withCredentials = true;
+
+  // body
+  if ('GET' != this.method && 'HEAD' != this.method && 'string' != typeof data && !isHost(data)) {
+    // serialize stuff
+    var serialize = request.serialize[this.getHeader('Content-Type')];
+    if (serialize) data = serialize(data);
+  }
+
+  // set header fields
+  for (var field in this.header) {
+    if (null == this.header[field]) continue;
+    xhr.setRequestHeader(field, this.header[field]);
+  }
+
+  // send stuff
+  this.emit('request', this);
+  xhr.send(data);
+  return this;
+};
+
+/**
+ * Expose `Request`.
+ */
+
+request.Request = Request;
+
+/**
+ * Issue a request:
+ *
+ * Examples:
+ *
+ *    request('GET', '/users').end(callback)
+ *    request('/users').end(callback)
+ *    request('/users', callback)
+ *
+ * @param {String} method
+ * @param {String|Function} url or callback
+ * @return {Request}
+ * @api public
+ */
+
+function request(method, url) {
+  // callback
+  if ('function' == typeof url) {
+    return new Request('GET', method).end(url);
+  }
+
+  // url first
+  if (1 == arguments.length) {
+    return new Request('GET', method);
+  }
+
+  return new Request(method, url);
+}
+
+/**
+ * GET `url` with optional callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed|Function} data or fn
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.get = function(url, data, fn){
+  var req = request('GET', url);
+  if ('function' == typeof data) fn = data, data = null;
+  if (data) req.query(data);
+  if (fn) req.end(fn);
+  return req;
+};
+
+/**
+ * HEAD `url` with optional callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed|Function} data or fn
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.head = function(url, data, fn){
+  var req = request('HEAD', url);
+  if ('function' == typeof data) fn = data, data = null;
+  if (data) req.send(data);
+  if (fn) req.end(fn);
+  return req;
+};
+
+/**
+ * DELETE `url` with optional callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.del = function(url, fn){
+  var req = request('DELETE', url);
+  if (fn) req.end(fn);
+  return req;
+};
+
+/**
+ * PATCH `url` with optional `data` and callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed} data
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.patch = function(url, data, fn){
+  var req = request('PATCH', url);
+  if ('function' == typeof data) fn = data, data = null;
+  if (data) req.send(data);
+  if (fn) req.end(fn);
+  return req;
+};
+
+/**
+ * POST `url` with optional `data` and callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed} data
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.post = function(url, data, fn){
+  var req = request('POST', url);
+  if ('function' == typeof data) fn = data, data = null;
+  if (data) req.send(data);
+  if (fn) req.end(fn);
+  return req;
+};
+
+/**
+ * PUT `url` with optional `data` and callback `fn(res)`.
+ *
+ * @param {String} url
+ * @param {Mixed|Function} data or fn
+ * @param {Function} fn
+ * @return {Request}
+ * @api public
+ */
+
+request.put = function(url, data, fn){
+  var req = request('PUT', url);
+  if ('function' == typeof data) fn = data, data = null;
+  if (data) req.send(data);
+  if (fn) req.end(fn);
+  return req;
+};
+
+/**
+ * Expose `request`.
+ */
+
+module.exports = request;
+
+});
+
+require.modules["visionmedia-superagent"] = require.modules["visionmedia~superagent@master"];
+require.modules["visionmedia~superagent"] = require.modules["visionmedia~superagent@master"];
+require.modules["superagent"] = require.modules["visionmedia~superagent@master"];
+
+
+require.register("optimuslime~win-query@0.0.1-4", function (exports, module) {
+var request = require('visionmedia~superagent@master');
+
+module.exports = winquery;
+
+function winquery(backbone, globalConfig, localConfig)
+{
+  var self= this;
+
+  //need to make requests, much like win-publish
+  //pull in backbone info, we gotta set our logger/emitter up
+  var self = this;
+
+  self.winFunction = "query";
+
+  //this is how we talk to win-backbone
+  self.backEmit = backbone.getEmitter(self);
+
+  //grab our logger
+  self.log = backbone.getLogger(self);
+
+  //only vital stuff goes out for normal logs
+  self.log.logLevel = localConfig.logLevel || self.log.normal;
+
+  //we have logger and emitter, set up some of our functions
+
+  if(!globalConfig.server)// || !globalConfig.port)
+    throw new Error("Global configuration requires server location and port")
+
+  self.hostname = globalConfig.server;
+  self.port = globalConfig.port;
+
+  var baseWIN = function()
+  {
+    return self.hostname + (self.port ?  ":" + self.port : "") + "/api";
+  }
+
+  self.getWIN = function(apiPath, queryObjects, resFunction)
+  {
+    var base = baseWIN();
+
+    if(typeof queryObjects == "function")
+    {
+      resFunction = queryObjects;
+      queryObjects = {};
+    }
+    else //make sure to always have at least an empty object
+      queryObjects = queryObjects || {};
+
+    var qNotEmpty = false;
+    var queryAdditions = "?";
+    for(var key in queryObjects){
+      if(queryAdditions.length > 1)
+        queryAdditions += "&";
+
+      qNotEmpty = true;
+      queryAdditions += key + "=" + queryObjects[key];
+    } 
+    var fullPath = base + apiPath + (qNotEmpty ? queryAdditions : "");
+
+    self.log("Requesting get from: ",fullPath )
+    request
+      .get(fullPath)
+      // .send(data)
+      .set('Accept', 'application/json')
+      .end(resFunction);
+  }
+
+  self.postWIN = function(apiPath, data, resFunction)
+  {
+    var base = baseWIN();
+
+    var fullPath= base + apiPath;
+    self.log("Requesting post to: ",fullPath )
+
+    request
+      .post(fullPath)
+      .send(data)
+      .set('Accept', 'application/json')
+      .end(resFunction);
+  }
+
+  //what events do we need?
+  //none for now, though in the future, we might have a way to communicate with foreign win-backbones as if it was just sending
+  //a message within our own backbone -- thereby obfuscating what is done remotely and what is done locally 
+  self.requiredEvents = function()
+  {
+    return [
+    ];
+  }
+
+  //what events do we respond to?
+  self.eventCallbacks = function()
+  { 
+    return {
+      "query:getArtifacts" : self.getArtifacts,
+      "query:getSeeds" : self.getSeeds,
+      "query:getHomeQuery" : self.getHomeData
+    };
+  }
+  self.getArtifacts = function(type, list, finished)
+  {
+    var apiPath = "/artifacts";
+
+    var lstring;
+    //combine artifacts together
+    if(typeof list == "string")
+    {
+      lString = list;
+    }
+    else if(Array.isArray(list))
+    {
+      lString = list.join(',');
+    }
+
+    self.getWIN(apiPath, {artifactType: type, wids: list}, function(err, res)
+    {
+      // self.log("Artifact return: ", err, " res: ", res.error);
+      if(err)
+      {
+        finished(err);
+        return;
+      }
+      else if(res.statusCode == 500 || res.statusCode == 404)
+      {
+        finished("Server Artifacts failure: " + JSON.stringify(res.error) + " | message: " + err.message);
+        return;
+      }
+
+      //otherwise, all good -- pass the body back -- just a list of artifacts
+      finished(undefined, res.body);
+
+    });
+  }
+  self.getHomeData = function(start, end, finished)
+  {
+    //simply make a request that fetches the different categories from the server
+    var apiPath = '/home/recent';
+      
+    //send start/end for knowing which part to look through
+
+    self.getWIN(apiPath, {start: start, end: end}, function(err, res)
+    {
+      self.log("Artifact return: ", err, " res: ", res.error);
+      if(err)
+      {
+        finished(err);
+        return;
+      }
+      else if(res.statusCode == 500 || res.statusCode == 404)
+      {
+        finished("Server Home failure: " + JSON.stringify(res.error) + " | message: " + err.message);
+        return;
+      }
+
+      //otherwise, all good
+      finished(undefined, {"recent" : res.body});
+
+    });
+  }
+  self.getSeeds = function(type, maxCount, finished)
+  {
+    var apiPath = "/seeds";
+
+    //grab the seeds (up to a maximum number)
+    self.getWIN(apiPath, {maxSeeds: maxCount}, function(err, res)
+    {
+      // self.log("Artifact return: ", err, " res: ", res.error);
+      if(err)
+      {
+        finished(err);
+        return;
+      }
+      else if(res.statusCode == 500 || res.statusCode == 404)
+      {
+        finished("Server Seed failure: " + JSON.stringify(res.error) + " | message: " + err.message);
+        return;
+      }
+
+      //otherwise, all good -- pass the body back -- just a list of artifacts
+      finished(undefined, res.body);
+
+    });
+  }
+
+  return self;
+
+}
+
+
+});
+
+require.modules["optimuslime-win-query"] = require.modules["optimuslime~win-query@0.0.1-4"];
+require.modules["optimuslime~win-query"] = require.modules["optimuslime~win-query@0.0.1-4"];
+require.modules["win-query"] = require.modules["optimuslime~win-query@0.0.1-4"];
+
+
 require.register("geraintluff~tv4@v1.1.4", function (exports, module) {
 /*
 Author: Geraint Luff and others
@@ -4135,1647 +5641,6 @@ function winSchema(winback, globalConfiguration, localConfiguration)
 require.modules["optimuslime-win-schema"] = require.modules["optimuslime~win-schema@0.0.5-7"];
 require.modules["optimuslime~win-schema"] = require.modules["optimuslime~win-schema@0.0.5-7"];
 require.modules["win-schema"] = require.modules["optimuslime~win-schema@0.0.5-7"];
-
-
-require.register("optimuslime~el.js@master", function (exports, module) {
-/**
-* el.js v0.3 - A JavaScript Node Creation Tool
-*
-* https://github.com/markgandolfo/el.js
-*
-* Copyright 2013 Mark Gandolfo and other contributors
-* Released under the MIT license.
-* http://en.wikipedia.org/wiki/MIT_License
-*/
-
-module.exports = el;
-
-function el(tagName, attrs, child) {
-  // Pattern to match id & class names
-  var pattern = /([a-z]+|#[\w-\d]+|\.[\w\d-]+)/g
-
-  if(arguments.length === 2) {
-    if(attrs instanceof Array
-    || typeof attrs === 'function'
-    || typeof attrs === 'string'
-    || attrs.constructor !== Object
-    ) {
-      child = attrs;
-      attrs = undefined;
-    }
-
-  }
-  // does the user pass attributes in, if not set an empty object up
-  attrs = typeof attrs !== 'undefined' ? attrs : {};
-  child = typeof child !== 'undefined' ? child : [];
-  child = child instanceof Array ? child : [child];
-
-  // run the pattern over the tagname an attempt to pull out class & id attributes
-  // shift the first record out as it's the element name
-  matched = tagName.match(pattern);
-  tagName = matched[0];
-  matched.shift();
-
-  // Iterate over the matches and concat the attrs to either class or id keys in attrs json object
-  for (var m in matched) {
-    if(matched[m][0] == '.') {
-      if(attrs['class'] == undefined) {
-        attrs['class'] = matched[m].substring(1, matched[m].length);
-      } else {
-        attrs['class'] = attrs['class'] + ' ' + matched[m].substring(1, matched[m].length);
-      }
-    } else if(matched[m][0] == '#') {
-      if(attrs['id'] == undefined) {
-        attrs['id'] = matched[m].substring(1, matched[m].length)
-      } else {
-        // Feels dirty having multiple id's, but it's allowed: http://www.w3.org/TR/selectors/#id-selectors
-        attrs['id'] = attrs['id'] + ' ' + matched[m].substring(1, matched[m].length);
-      }
-    }
-  }
-
-  //A little helper: if your attrs includes style object
-  //we turn the style object into a style string for direct application
-  if(typeof attrs["style"] != "string" && typeof attrs["style"] == "object")
-  {
-    var styleObj = attrs["style"];
-    //we build the string
-    var concat = "";
-
-    //for each style object
-    for(var key in styleObj) 
-      //concat the key + value with : inbetween (e.g. width: 100px;)
-      concat += (key + ": " + styleObj[key] + "; ");
-
-    //grab the concatenated style string
-    attrs["style"] = concat; 
-  }
-
-
-  // create the element
-  var element = document.createElement(tagName);
-  for(var i = 0; i < child.length; i += 1) {
-    (function(child){
-      switch(typeof child) {
-        case 'object':
-          element.appendChild(child);
-          break;
-        case 'function':
-          var discardDoneCallbackResult = false;
-          var doneCallback = function doneCallback(content) {
-            if (!discardDoneCallbackResult) {
-              element.appendChild(content);
-            }
-          }
-          var result = child.apply(null, [doneCallback])
-          if(typeof result != 'undefined') {
-            discardDoneCallbackResult = true;
-            element.appendChild(result);
-          }
-          break;
-        case 'string':
-          element.appendChild(document.createTextNode(child));
-        default:
-          //???
-      }
-    }(child[i]));
-
-  }
-
-  for (var key in attrs) {
-    if (attrs.hasOwnProperty(key)) {
-      element.setAttribute(key, attrs[key]);
-    }
-  }
-
-  return element;
-};
-
-// alias
-el.create = el.c = el;
-
-// vanity methods
-el.img = function(attrs) {
-  return el.create('img', attrs);
-};
-
-el.a = function(attrs, child) {
-  return el.create('a', attrs, child);
-};
-
-el.div = function(attrs, child) {
-  return el.create('div', attrs, child);
-};
-
-el.p = function(attrs, child) {
-  return el.create('p', attrs, child);
-};
-
-el.input = function(attrs, child) {
-  return el.create('input', attrs);
-};
-
-});
-
-require.modules["optimuslime-el.js"] = require.modules["optimuslime~el.js@master"];
-require.modules["optimuslime~el.js"] = require.modules["optimuslime~el.js@master"];
-require.modules["el.js"] = require.modules["optimuslime~el.js@master"];
-
-
-require.register("component~reduce@1.0.1", function (exports, module) {
-
-/**
- * Reduce `arr` with `fn`.
- *
- * @param {Array} arr
- * @param {Function} fn
- * @param {Mixed} initial
- *
- * TODO: combatible error handling?
- */
-
-module.exports = function(arr, fn, initial){  
-  var idx = 0;
-  var len = arr.length;
-  var curr = arguments.length == 3
-    ? initial
-    : arr[idx++];
-
-  while (idx < len) {
-    curr = fn.call(null, curr, arr[idx], ++idx, arr);
-  }
-  
-  return curr;
-};
-});
-
-require.modules["component-reduce"] = require.modules["component~reduce@1.0.1"];
-require.modules["component~reduce"] = require.modules["component~reduce@1.0.1"];
-require.modules["reduce"] = require.modules["component~reduce@1.0.1"];
-
-
-require.register("visionmedia~superagent@master", function (exports, module) {
-/**
- * Module dependencies.
- */
-
-var Emitter = require('component~emitter@master');
-var reduce = require('component~reduce@1.0.1');
-
-/**
- * Root reference for iframes.
- */
-
-var root = 'undefined' == typeof window
-  ? (this || self)
-  : window;
-
-/**
- * Noop.
- */
-
-function noop(){};
-
-/**
- * Check if `obj` is a host object,
- * we don't want to serialize these :)
- *
- * TODO: future proof, move to compoent land
- *
- * @param {Object} obj
- * @return {Boolean}
- * @api private
- */
-
-function isHost(obj) {
-  var str = {}.toString.call(obj);
-
-  switch (str) {
-    case '[object File]':
-    case '[object Blob]':
-    case '[object FormData]':
-      return true;
-    default:
-      return false;
-  }
-}
-
-/**
- * Determine XHR.
- */
-
-request.getXHR = function () {
-  if (root.XMLHttpRequest
-      && (!root.location || 'file:' != root.location.protocol
-          || !root.ActiveXObject)) {
-    return new XMLHttpRequest;
-  } else {
-    try { return new ActiveXObject('Microsoft.XMLHTTP'); } catch(e) {}
-    try { return new ActiveXObject('Msxml2.XMLHTTP.6.0'); } catch(e) {}
-    try { return new ActiveXObject('Msxml2.XMLHTTP.3.0'); } catch(e) {}
-    try { return new ActiveXObject('Msxml2.XMLHTTP'); } catch(e) {}
-  }
-  return false;
-};
-
-/**
- * Removes leading and trailing whitespace, added to support IE.
- *
- * @param {String} s
- * @return {String}
- * @api private
- */
-
-var trim = ''.trim
-  ? function(s) { return s.trim(); }
-  : function(s) { return s.replace(/(^\s*|\s*$)/g, ''); };
-
-/**
- * Check if `obj` is an object.
- *
- * @param {Object} obj
- * @return {Boolean}
- * @api private
- */
-
-function isObject(obj) {
-  return obj === Object(obj);
-}
-
-/**
- * Serialize the given `obj`.
- *
- * @param {Object} obj
- * @return {String}
- * @api private
- */
-
-function serialize(obj) {
-  if (!isObject(obj)) return obj;
-  var pairs = [];
-  for (var key in obj) {
-    if (null != obj[key]) {
-      pairs.push(encodeURIComponent(key)
-        + '=' + encodeURIComponent(obj[key]));
-    }
-  }
-  return pairs.join('&');
-}
-
-/**
- * Expose serialization method.
- */
-
- request.serializeObject = serialize;
-
- /**
-  * Parse the given x-www-form-urlencoded `str`.
-  *
-  * @param {String} str
-  * @return {Object}
-  * @api private
-  */
-
-function parseString(str) {
-  var obj = {};
-  var pairs = str.split('&');
-  var parts;
-  var pair;
-
-  for (var i = 0, len = pairs.length; i < len; ++i) {
-    pair = pairs[i];
-    parts = pair.split('=');
-    obj[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);
-  }
-
-  return obj;
-}
-
-/**
- * Expose parser.
- */
-
-request.parseString = parseString;
-
-/**
- * Default MIME type map.
- *
- *     superagent.types.xml = 'application/xml';
- *
- */
-
-request.types = {
-  html: 'text/html',
-  json: 'application/json',
-  xml: 'application/xml',
-  urlencoded: 'application/x-www-form-urlencoded',
-  'form': 'application/x-www-form-urlencoded',
-  'form-data': 'application/x-www-form-urlencoded'
-};
-
-/**
- * Default serialization map.
- *
- *     superagent.serialize['application/xml'] = function(obj){
- *       return 'generated xml here';
- *     };
- *
- */
-
- request.serialize = {
-   'application/x-www-form-urlencoded': serialize,
-   'application/json': JSON.stringify
- };
-
- /**
-  * Default parsers.
-  *
-  *     superagent.parse['application/xml'] = function(str){
-  *       return { object parsed from str };
-  *     };
-  *
-  */
-
-request.parse = {
-  'application/x-www-form-urlencoded': parseString,
-  'application/json': JSON.parse
-};
-
-/**
- * Parse the given header `str` into
- * an object containing the mapped fields.
- *
- * @param {String} str
- * @return {Object}
- * @api private
- */
-
-function parseHeader(str) {
-  var lines = str.split(/\r?\n/);
-  var fields = {};
-  var index;
-  var line;
-  var field;
-  var val;
-
-  lines.pop(); // trailing CRLF
-
-  for (var i = 0, len = lines.length; i < len; ++i) {
-    line = lines[i];
-    index = line.indexOf(':');
-    field = line.slice(0, index).toLowerCase();
-    val = trim(line.slice(index + 1));
-    fields[field] = val;
-  }
-
-  return fields;
-}
-
-/**
- * Return the mime type for the given `str`.
- *
- * @param {String} str
- * @return {String}
- * @api private
- */
-
-function type(str){
-  return str.split(/ *; */).shift();
-};
-
-/**
- * Return header field parameters.
- *
- * @param {String} str
- * @return {Object}
- * @api private
- */
-
-function params(str){
-  return reduce(str.split(/ *; */), function(obj, str){
-    var parts = str.split(/ *= */)
-      , key = parts.shift()
-      , val = parts.shift();
-
-    if (key && val) obj[key] = val;
-    return obj;
-  }, {});
-};
-
-/**
- * Initialize a new `Response` with the given `xhr`.
- *
- *  - set flags (.ok, .error, etc)
- *  - parse header
- *
- * Examples:
- *
- *  Aliasing `superagent` as `request` is nice:
- *
- *      request = superagent;
- *
- *  We can use the promise-like API, or pass callbacks:
- *
- *      request.get('/').end(function(res){});
- *      request.get('/', function(res){});
- *
- *  Sending data can be chained:
- *
- *      request
- *        .post('/user')
- *        .send({ name: 'tj' })
- *        .end(function(res){});
- *
- *  Or passed to `.send()`:
- *
- *      request
- *        .post('/user')
- *        .send({ name: 'tj' }, function(res){});
- *
- *  Or passed to `.post()`:
- *
- *      request
- *        .post('/user', { name: 'tj' })
- *        .end(function(res){});
- *
- * Or further reduced to a single call for simple cases:
- *
- *      request
- *        .post('/user', { name: 'tj' }, function(res){});
- *
- * @param {XMLHTTPRequest} xhr
- * @param {Object} options
- * @api private
- */
-
-function Response(req, options) {
-  options = options || {};
-  this.req = req;
-  this.xhr = this.req.xhr;
-  // responseText is accessible only if responseType is '' or 'text' and on older browsers
-  this.text = ((this.req.method !='HEAD' && (this.xhr.responseType === '' || this.xhr.responseType === 'text')) || typeof this.xhr.responseType === 'undefined')
-     ? this.xhr.responseText
-     : null;
-  this.statusText = this.req.xhr.statusText;
-  this.setStatusProperties(this.xhr.status);
-  this.header = this.headers = parseHeader(this.xhr.getAllResponseHeaders());
-  // getAllResponseHeaders sometimes falsely returns "" for CORS requests, but
-  // getResponseHeader still works. so we get content-type even if getting
-  // other headers fails.
-  this.header['content-type'] = this.xhr.getResponseHeader('content-type');
-  this.setHeaderProperties(this.header);
-  this.body = this.req.method != 'HEAD'
-    ? this.parseBody(this.text ? this.text : this.xhr.response)
-    : null;
-}
-
-/**
- * Get case-insensitive `field` value.
- *
- * @param {String} field
- * @return {String}
- * @api public
- */
-
-Response.prototype.get = function(field){
-  return this.header[field.toLowerCase()];
-};
-
-/**
- * Set header related properties:
- *
- *   - `.type` the content type without params
- *
- * A response of "Content-Type: text/plain; charset=utf-8"
- * will provide you with a `.type` of "text/plain".
- *
- * @param {Object} header
- * @api private
- */
-
-Response.prototype.setHeaderProperties = function(header){
-  // content-type
-  var ct = this.header['content-type'] || '';
-  this.type = type(ct);
-
-  // params
-  var obj = params(ct);
-  for (var key in obj) this[key] = obj[key];
-};
-
-/**
- * Parse the given body `str`.
- *
- * Used for auto-parsing of bodies. Parsers
- * are defined on the `superagent.parse` object.
- *
- * @param {String} str
- * @return {Mixed}
- * @api private
- */
-
-Response.prototype.parseBody = function(str){
-  var parse = request.parse[this.type];
-  return parse && str && (str.length || str instanceof Object)
-    ? parse(str)
-    : null;
-};
-
-/**
- * Set flags such as `.ok` based on `status`.
- *
- * For example a 2xx response will give you a `.ok` of __true__
- * whereas 5xx will be __false__ and `.error` will be __true__. The
- * `.clientError` and `.serverError` are also available to be more
- * specific, and `.statusType` is the class of error ranging from 1..5
- * sometimes useful for mapping respond colors etc.
- *
- * "sugar" properties are also defined for common cases. Currently providing:
- *
- *   - .noContent
- *   - .badRequest
- *   - .unauthorized
- *   - .notAcceptable
- *   - .notFound
- *
- * @param {Number} status
- * @api private
- */
-
-Response.prototype.setStatusProperties = function(status){
-  // handle IE9 bug: http://stackoverflow.com/questions/10046972/msie-returns-status-code-of-1223-for-ajax-request
-  if (status === 1223) {
-    status = 204;
-  }
-
-  var type = status / 100 | 0;
-
-  // status / class
-  this.status = status;
-  this.statusType = type;
-
-  // basics
-  this.info = 1 == type;
-  this.ok = 2 == type;
-  this.clientError = 4 == type;
-  this.serverError = 5 == type;
-  this.error = (4 == type || 5 == type)
-    ? this.toError()
-    : false;
-
-  // sugar
-  this.accepted = 202 == status;
-  this.noContent = 204 == status;
-  this.badRequest = 400 == status;
-  this.unauthorized = 401 == status;
-  this.notAcceptable = 406 == status;
-  this.notFound = 404 == status;
-  this.forbidden = 403 == status;
-};
-
-/**
- * Return an `Error` representative of this response.
- *
- * @return {Error}
- * @api public
- */
-
-Response.prototype.toError = function(){
-  var req = this.req;
-  var method = req.method;
-  var url = req.url;
-
-  var msg = 'cannot ' + method + ' ' + url + ' (' + this.status + ')';
-  var err = new Error(msg);
-  err.status = this.status;
-  err.method = method;
-  err.url = url;
-
-  return err;
-};
-
-/**
- * Expose `Response`.
- */
-
-request.Response = Response;
-
-/**
- * Initialize a new `Request` with the given `method` and `url`.
- *
- * @param {String} method
- * @param {String} url
- * @api public
- */
-
-function Request(method, url) {
-  var self = this;
-  Emitter.call(this);
-  this._query = this._query || [];
-  this.method = method;
-  this.url = url;
-  this.header = {};
-  this._header = {};
-  this.on('end', function(){
-    var err = null;
-    var res = null;
-
-    try {
-      res = new Response(self);
-    } catch(e) {
-      err = new Error('Parser is unable to parse the response');
-      err.parse = true;
-      err.original = e;
-      return self.callback(err);
-    }
-
-    self.emit('response', res);
-
-    if (err) {
-      return self.callback(err, res);
-    }
-
-    if (res.status >= 200 && res.status < 300) {
-      return self.callback(err, res);
-    }
-
-    var new_err = new Error(res.statusText || 'Unsuccessful HTTP response');
-    new_err.original = err;
-    new_err.response = res;
-    new_err.status = res.status;
-
-    self.callback(err || new_err, res);
-  });
-}
-
-/**
- * Mixin `Emitter`.
- */
-
-Emitter(Request.prototype);
-
-/**
- * Allow for extension
- */
-
-Request.prototype.use = function(fn) {
-  fn(this);
-  return this;
-}
-
-/**
- * Set timeout to `ms`.
- *
- * @param {Number} ms
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.timeout = function(ms){
-  this._timeout = ms;
-  return this;
-};
-
-/**
- * Clear previous timeout.
- *
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.clearTimeout = function(){
-  this._timeout = 0;
-  clearTimeout(this._timer);
-  return this;
-};
-
-/**
- * Abort the request, and clear potential timeout.
- *
- * @return {Request}
- * @api public
- */
-
-Request.prototype.abort = function(){
-  if (this.aborted) return;
-  this.aborted = true;
-  this.xhr.abort();
-  this.clearTimeout();
-  this.emit('abort');
-  return this;
-};
-
-/**
- * Set header `field` to `val`, or multiple fields with one object.
- *
- * Examples:
- *
- *      req.get('/')
- *        .set('Accept', 'application/json')
- *        .set('X-API-Key', 'foobar')
- *        .end(callback);
- *
- *      req.get('/')
- *        .set({ Accept: 'application/json', 'X-API-Key': 'foobar' })
- *        .end(callback);
- *
- * @param {String|Object} field
- * @param {String} val
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.set = function(field, val){
-  if (isObject(field)) {
-    for (var key in field) {
-      this.set(key, field[key]);
-    }
-    return this;
-  }
-  this._header[field.toLowerCase()] = val;
-  this.header[field] = val;
-  return this;
-};
-
-/**
- * Remove header `field`.
- *
- * Example:
- *
- *      req.get('/')
- *        .unset('User-Agent')
- *        .end(callback);
- *
- * @param {String} field
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.unset = function(field){
-  delete this._header[field.toLowerCase()];
-  delete this.header[field];
-  return this;
-};
-
-/**
- * Get case-insensitive header `field` value.
- *
- * @param {String} field
- * @return {String}
- * @api private
- */
-
-Request.prototype.getHeader = function(field){
-  return this._header[field.toLowerCase()];
-};
-
-/**
- * Set Content-Type to `type`, mapping values from `request.types`.
- *
- * Examples:
- *
- *      superagent.types.xml = 'application/xml';
- *
- *      request.post('/')
- *        .type('xml')
- *        .send(xmlstring)
- *        .end(callback);
- *
- *      request.post('/')
- *        .type('application/xml')
- *        .send(xmlstring)
- *        .end(callback);
- *
- * @param {String} type
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.type = function(type){
-  this.set('Content-Type', request.types[type] || type);
-  return this;
-};
-
-/**
- * Set Accept to `type`, mapping values from `request.types`.
- *
- * Examples:
- *
- *      superagent.types.json = 'application/json';
- *
- *      request.get('/agent')
- *        .accept('json')
- *        .end(callback);
- *
- *      request.get('/agent')
- *        .accept('application/json')
- *        .end(callback);
- *
- * @param {String} accept
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.accept = function(type){
-  this.set('Accept', request.types[type] || type);
-  return this;
-};
-
-/**
- * Set Authorization field value with `user` and `pass`.
- *
- * @param {String} user
- * @param {String} pass
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.auth = function(user, pass){
-  var str = btoa(user + ':' + pass);
-  this.set('Authorization', 'Basic ' + str);
-  return this;
-};
-
-/**
-* Add query-string `val`.
-*
-* Examples:
-*
-*   request.get('/shoes')
-*     .query('size=10')
-*     .query({ color: 'blue' })
-*
-* @param {Object|String} val
-* @return {Request} for chaining
-* @api public
-*/
-
-Request.prototype.query = function(val){
-  if ('string' != typeof val) val = serialize(val);
-  if (val) this._query.push(val);
-  return this;
-};
-
-/**
- * Write the field `name` and `val` for "multipart/form-data"
- * request bodies.
- *
- * ``` js
- * request.post('/upload')
- *   .field('foo', 'bar')
- *   .end(callback);
- * ```
- *
- * @param {String} name
- * @param {String|Blob|File} val
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.field = function(name, val){
-  if (!this._formData) this._formData = new root.FormData();
-  this._formData.append(name, val);
-  return this;
-};
-
-/**
- * Queue the given `file` as an attachment to the specified `field`,
- * with optional `filename`.
- *
- * ``` js
- * request.post('/upload')
- *   .attach(new Blob(['<a id="a"><b id="b">hey!</b></a>'], { type: "text/html"}))
- *   .end(callback);
- * ```
- *
- * @param {String} field
- * @param {Blob|File} file
- * @param {String} filename
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.attach = function(field, file, filename){
-  if (!this._formData) this._formData = new root.FormData();
-  this._formData.append(field, file, filename);
-  return this;
-};
-
-/**
- * Send `data`, defaulting the `.type()` to "json" when
- * an object is given.
- *
- * Examples:
- *
- *       // querystring
- *       request.get('/search')
- *         .end(callback)
- *
- *       // multiple data "writes"
- *       request.get('/search')
- *         .send({ search: 'query' })
- *         .send({ range: '1..5' })
- *         .send({ order: 'desc' })
- *         .end(callback)
- *
- *       // manual json
- *       request.post('/user')
- *         .type('json')
- *         .send('{"name":"tj"})
- *         .end(callback)
- *
- *       // auto json
- *       request.post('/user')
- *         .send({ name: 'tj' })
- *         .end(callback)
- *
- *       // manual x-www-form-urlencoded
- *       request.post('/user')
- *         .type('form')
- *         .send('name=tj')
- *         .end(callback)
- *
- *       // auto x-www-form-urlencoded
- *       request.post('/user')
- *         .type('form')
- *         .send({ name: 'tj' })
- *         .end(callback)
- *
- *       // defaults to x-www-form-urlencoded
-  *      request.post('/user')
-  *        .send('name=tobi')
-  *        .send('species=ferret')
-  *        .end(callback)
- *
- * @param {String|Object} data
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.send = function(data){
-  var obj = isObject(data);
-  var type = this.getHeader('Content-Type');
-
-  // merge
-  if (obj && isObject(this._data)) {
-    for (var key in data) {
-      this._data[key] = data[key];
-    }
-  } else if ('string' == typeof data) {
-    if (!type) this.type('form');
-    type = this.getHeader('Content-Type');
-    if ('application/x-www-form-urlencoded' == type) {
-      this._data = this._data
-        ? this._data + '&' + data
-        : data;
-    } else {
-      this._data = (this._data || '') + data;
-    }
-  } else {
-    this._data = data;
-  }
-
-  if (!obj || isHost(data)) return this;
-  if (!type) this.type('json');
-  return this;
-};
-
-/**
- * Invoke the callback with `err` and `res`
- * and handle arity check.
- *
- * @param {Error} err
- * @param {Response} res
- * @api private
- */
-
-Request.prototype.callback = function(err, res){
-  var fn = this._callback;
-  this.clearTimeout();
-  fn(err, res);
-};
-
-/**
- * Invoke callback with x-domain error.
- *
- * @api private
- */
-
-Request.prototype.crossDomainError = function(){
-  var err = new Error('Origin is not allowed by Access-Control-Allow-Origin');
-  err.crossDomain = true;
-  this.callback(err);
-};
-
-/**
- * Invoke callback with timeout error.
- *
- * @api private
- */
-
-Request.prototype.timeoutError = function(){
-  var timeout = this._timeout;
-  var err = new Error('timeout of ' + timeout + 'ms exceeded');
-  err.timeout = timeout;
-  this.callback(err);
-};
-
-/**
- * Enable transmission of cookies with x-domain requests.
- *
- * Note that for this to work the origin must not be
- * using "Access-Control-Allow-Origin" with a wildcard,
- * and also must set "Access-Control-Allow-Credentials"
- * to "true".
- *
- * @api public
- */
-
-Request.prototype.withCredentials = function(){
-  this._withCredentials = true;
-  return this;
-};
-
-/**
- * Initiate request, invoking callback `fn(res)`
- * with an instanceof `Response`.
- *
- * @param {Function} fn
- * @return {Request} for chaining
- * @api public
- */
-
-Request.prototype.end = function(fn){
-  var self = this;
-  var xhr = this.xhr = request.getXHR();
-  var query = this._query.join('&');
-  var timeout = this._timeout;
-  var data = this._formData || this._data;
-
-  // store callback
-  this._callback = fn || noop;
-
-  // state change
-  xhr.onreadystatechange = function(){
-    if (4 != xhr.readyState) return;
-
-    // In IE9, reads to any property (e.g. status) off of an aborted XHR will
-    // result in the error "Could not complete the operation due to error c00c023f"
-    var status;
-    try { status = xhr.status } catch(e) { status = 0; }
-
-    if (0 == status) {
-      if (self.timedout) return self.timeoutError();
-      if (self.aborted) return;
-      return self.crossDomainError();
-    }
-    self.emit('end');
-  };
-
-  // progress
-  var handleProgress = function(e){
-    if (e.total > 0) {
-      e.percent = e.loaded / e.total * 100;
-    }
-    self.emit('progress', e);
-  };
-  if (this.hasListeners('progress')) {
-    xhr.onprogress = handleProgress;
-  }
-  try {
-    if (xhr.upload && this.hasListeners('progress')) {
-      xhr.upload.onprogress = handleProgress;
-    }
-  } catch(e) {
-    // Accessing xhr.upload fails in IE from a web worker, so just pretend it doesn't exist.
-    // Reported here:
-    // https://connect.microsoft.com/IE/feedback/details/837245/xmlhttprequest-upload-throws-invalid-argument-when-used-from-web-worker-context
-  }
-
-  // timeout
-  if (timeout && !this._timer) {
-    this._timer = setTimeout(function(){
-      self.timedout = true;
-      self.abort();
-    }, timeout);
-  }
-
-  // querystring
-  if (query) {
-    query = request.serializeObject(query);
-    this.url += ~this.url.indexOf('?')
-      ? '&' + query
-      : '?' + query;
-  }
-
-  // initiate request
-  xhr.open(this.method, this.url, true);
-
-  // CORS
-  if (this._withCredentials) xhr.withCredentials = true;
-
-  // body
-  if ('GET' != this.method && 'HEAD' != this.method && 'string' != typeof data && !isHost(data)) {
-    // serialize stuff
-    var serialize = request.serialize[this.getHeader('Content-Type')];
-    if (serialize) data = serialize(data);
-  }
-
-  // set header fields
-  for (var field in this.header) {
-    if (null == this.header[field]) continue;
-    xhr.setRequestHeader(field, this.header[field]);
-  }
-
-  // send stuff
-  this.emit('request', this);
-  xhr.send(data);
-  return this;
-};
-
-/**
- * Expose `Request`.
- */
-
-request.Request = Request;
-
-/**
- * Issue a request:
- *
- * Examples:
- *
- *    request('GET', '/users').end(callback)
- *    request('/users').end(callback)
- *    request('/users', callback)
- *
- * @param {String} method
- * @param {String|Function} url or callback
- * @return {Request}
- * @api public
- */
-
-function request(method, url) {
-  // callback
-  if ('function' == typeof url) {
-    return new Request('GET', method).end(url);
-  }
-
-  // url first
-  if (1 == arguments.length) {
-    return new Request('GET', method);
-  }
-
-  return new Request(method, url);
-}
-
-/**
- * GET `url` with optional callback `fn(res)`.
- *
- * @param {String} url
- * @param {Mixed|Function} data or fn
- * @param {Function} fn
- * @return {Request}
- * @api public
- */
-
-request.get = function(url, data, fn){
-  var req = request('GET', url);
-  if ('function' == typeof data) fn = data, data = null;
-  if (data) req.query(data);
-  if (fn) req.end(fn);
-  return req;
-};
-
-/**
- * HEAD `url` with optional callback `fn(res)`.
- *
- * @param {String} url
- * @param {Mixed|Function} data or fn
- * @param {Function} fn
- * @return {Request}
- * @api public
- */
-
-request.head = function(url, data, fn){
-  var req = request('HEAD', url);
-  if ('function' == typeof data) fn = data, data = null;
-  if (data) req.send(data);
-  if (fn) req.end(fn);
-  return req;
-};
-
-/**
- * DELETE `url` with optional callback `fn(res)`.
- *
- * @param {String} url
- * @param {Function} fn
- * @return {Request}
- * @api public
- */
-
-request.del = function(url, fn){
-  var req = request('DELETE', url);
-  if (fn) req.end(fn);
-  return req;
-};
-
-/**
- * PATCH `url` with optional `data` and callback `fn(res)`.
- *
- * @param {String} url
- * @param {Mixed} data
- * @param {Function} fn
- * @return {Request}
- * @api public
- */
-
-request.patch = function(url, data, fn){
-  var req = request('PATCH', url);
-  if ('function' == typeof data) fn = data, data = null;
-  if (data) req.send(data);
-  if (fn) req.end(fn);
-  return req;
-};
-
-/**
- * POST `url` with optional `data` and callback `fn(res)`.
- *
- * @param {String} url
- * @param {Mixed} data
- * @param {Function} fn
- * @return {Request}
- * @api public
- */
-
-request.post = function(url, data, fn){
-  var req = request('POST', url);
-  if ('function' == typeof data) fn = data, data = null;
-  if (data) req.send(data);
-  if (fn) req.end(fn);
-  return req;
-};
-
-/**
- * PUT `url` with optional `data` and callback `fn(res)`.
- *
- * @param {String} url
- * @param {Mixed|Function} data or fn
- * @param {Function} fn
- * @return {Request}
- * @api public
- */
-
-request.put = function(url, data, fn){
-  var req = request('PUT', url);
-  if ('function' == typeof data) fn = data, data = null;
-  if (data) req.send(data);
-  if (fn) req.end(fn);
-  return req;
-};
-
-/**
- * Expose `request`.
- */
-
-module.exports = request;
-
-});
-
-require.modules["visionmedia-superagent"] = require.modules["visionmedia~superagent@master"];
-require.modules["visionmedia~superagent"] = require.modules["visionmedia~superagent@master"];
-require.modules["superagent"] = require.modules["visionmedia~superagent@master"];
-
-
-require.register("optimuslime~win-publish@0.0.1-4", function (exports, module) {
-//superagent handles browser or node.js requests
-//thank you tjholowaychuk
-var request = require('visionmedia~superagent@master');
-
-//now we're ready to get into this module
-module.exports = winpublish;
-
-function winpublish(backbone, globalConfig, localConfig)
-{
-	//pull in backbone info, we gotta set our logger/emitter up
-	var self = this;
-
-	self.winFunction = "publish";
-
-	//this is how we talk to win-backbone
-	self.backEmit = backbone.getEmitter(self);
-
-	//grab our logger
-	self.log = backbone.getLogger(self);
-
-	//only vital stuff goes out for normal logs
-	self.log.logLevel = localConfig.logLevel || self.log.normal;
-
-	//we have logger and emitter, set up some of our functions
-
-	if(!globalConfig.server)
-		throw new Error("Global configuration requires server location and port")
-
-	self.hostname = globalConfig.server;
-	self.port = globalConfig.port;
-	
-	//what events do we need?
-	//none for now, though in the future, we might have a way to communicate with foreign win-backbones as if it was just sending
-	//a message within our own backbone -- thereby obfuscating what is done remotely and what is done locally 
-	self.requiredEvents = function()
-	{
-		return [
-		];
-	}
-
-	//what events do we respond to?
-	self.eventCallbacks = function()
-	{ 
-		return {
-			"publish:publishArtifacts" : self.publishArtifacts
-		};
-	}
-
-	var baseWIN = function()
-	{
-		return self.hostname + (self.port ? ":" + self.port : "") + "/api";
-	}
-
-	self.getWIN = function(apiPath, data, resFunction)
-	{
-		var base = baseWIN();
-
-		request
-		  .get(base + apiPath)
-		  // .send(data)
-		  .set('Accept', 'application/json')
-		  .end(resFunction);
-	}
-
-	self.postWIN = function(apiPath, data, resFunction)
-	{
-		var base = baseWIN();
-
-		request
-		  .post(base + apiPath)
-		  .send(data)
-		  .set('Accept', 'application/json')
-		  .end(resFunction);
-	}
-
-	//publish many at a time! Heading out to the internet thank you
-	self.publishArtifacts = function(type, session, individuals, privateIndividuals, finished)
-	{
-		//need to hit the server for certain behavior
-		var apiPath = '/artifacts';
-		
-		var artifacts = individuals;
-		var privateArtifacts = privateIndividuals;
-		//artifacts going in must be in an array -- this will change in the future 
-		//for backwards compat, it is what it is
-
-		// if(Array.isArray(individuals, privateIndividuals))
-		// {
-		// 	artifacts = {};
-		// 	for(var i=0; i < individuals, privateIndividuals.length; i++)
-		// 	{
-		// 		var ind = individuals, privateIndividuals[i];
-		// 		artifacts[ind.wid] = ind;
-		// 	}
-		// }
-
-		var data = {artifacts: artifacts, privateArtifacts: privateArtifacts, artifactType: type, user: '', sessionID: session.sessionID, publish: session.publish};
-
-		self.postWIN(apiPath, data, function(err, res)
-		{
-			self.log("Artifact return: ", err, " res: ", res.error);
-			if(err)
-			{
-				finished(err);
-				return;
-			}
-			else if(res.statusCode == 500 || res.statusCode == 404)
-			{
-				finished("Server failure: " + JSON.stringify(res.error) + " | message: " + err.message);
-				return;
-			}
-
-
-			//otherwise, all good
-			finished();
-
-			//maybe wwe do other things, don't know yet
-		});
-	}
-
-	return self;
-}
-
-
-
-
-
-});
-
-require.modules["optimuslime-win-publish"] = require.modules["optimuslime~win-publish@0.0.1-4"];
-require.modules["optimuslime~win-publish"] = require.modules["optimuslime~win-publish@0.0.1-4"];
-require.modules["win-publish"] = require.modules["optimuslime~win-publish@0.0.1-4"];
-
-
-require.register("optimuslime~win-query@0.0.1-4", function (exports, module) {
-var request = require('visionmedia~superagent@master');
-
-module.exports = winquery;
-
-function winquery(backbone, globalConfig, localConfig)
-{
-  var self= this;
-
-  //need to make requests, much like win-publish
-  //pull in backbone info, we gotta set our logger/emitter up
-  var self = this;
-
-  self.winFunction = "query";
-
-  //this is how we talk to win-backbone
-  self.backEmit = backbone.getEmitter(self);
-
-  //grab our logger
-  self.log = backbone.getLogger(self);
-
-  //only vital stuff goes out for normal logs
-  self.log.logLevel = localConfig.logLevel || self.log.normal;
-
-  //we have logger and emitter, set up some of our functions
-
-  if(!globalConfig.server)// || !globalConfig.port)
-    throw new Error("Global configuration requires server location and port")
-
-  self.hostname = globalConfig.server;
-  self.port = globalConfig.port;
-
-  var baseWIN = function()
-  {
-    return self.hostname + (self.port ?  ":" + self.port : "") + "/api";
-  }
-
-  self.getWIN = function(apiPath, queryObjects, resFunction)
-  {
-    var base = baseWIN();
-
-    if(typeof queryObjects == "function")
-    {
-      resFunction = queryObjects;
-      queryObjects = {};
-    }
-    else //make sure to always have at least an empty object
-      queryObjects = queryObjects || {};
-
-    var qNotEmpty = false;
-    var queryAdditions = "?";
-    for(var key in queryObjects){
-      if(queryAdditions.length > 1)
-        queryAdditions += "&";
-
-      qNotEmpty = true;
-      queryAdditions += key + "=" + queryObjects[key];
-    } 
-    var fullPath = base + apiPath + (qNotEmpty ? queryAdditions : "");
-
-    self.log("Requesting get from: ",fullPath )
-    request
-      .get(fullPath)
-      // .send(data)
-      .set('Accept', 'application/json')
-      .end(resFunction);
-  }
-
-  self.postWIN = function(apiPath, data, resFunction)
-  {
-    var base = baseWIN();
-
-    var fullPath= base + apiPath;
-    self.log("Requesting post to: ",fullPath )
-
-    request
-      .post(fullPath)
-      .send(data)
-      .set('Accept', 'application/json')
-      .end(resFunction);
-  }
-
-  //what events do we need?
-  //none for now, though in the future, we might have a way to communicate with foreign win-backbones as if it was just sending
-  //a message within our own backbone -- thereby obfuscating what is done remotely and what is done locally 
-  self.requiredEvents = function()
-  {
-    return [
-    ];
-  }
-
-  //what events do we respond to?
-  self.eventCallbacks = function()
-  { 
-    return {
-      "query:getArtifacts" : self.getArtifacts,
-      "query:getSeeds" : self.getSeeds,
-      "query:getHomeQuery" : self.getHomeData
-    };
-  }
-  self.getArtifacts = function(type, list, finished)
-  {
-    var apiPath = "/artifacts";
-
-    var lstring;
-    //combine artifacts together
-    if(typeof list == "string")
-    {
-      lString = list;
-    }
-    else if(Array.isArray(list))
-    {
-      lString = list.join(',');
-    }
-
-    self.getWIN(apiPath, {artifactType: type, wids: list}, function(err, res)
-    {
-      // self.log("Artifact return: ", err, " res: ", res.error);
-      if(err)
-      {
-        finished(err);
-        return;
-      }
-      else if(res.statusCode == 500 || res.statusCode == 404)
-      {
-        finished("Server Artifacts failure: " + JSON.stringify(res.error) + " | message: " + err.message);
-        return;
-      }
-
-      //otherwise, all good -- pass the body back -- just a list of artifacts
-      finished(undefined, res.body);
-
-    });
-  }
-  self.getHomeData = function(start, end, finished)
-  {
-    //simply make a request that fetches the different categories from the server
-    var apiPath = '/home/recent';
-      
-    //send start/end for knowing which part to look through
-
-    self.getWIN(apiPath, {start: start, end: end}, function(err, res)
-    {
-      self.log("Artifact return: ", err, " res: ", res.error);
-      if(err)
-      {
-        finished(err);
-        return;
-      }
-      else if(res.statusCode == 500 || res.statusCode == 404)
-      {
-        finished("Server Home failure: " + JSON.stringify(res.error) + " | message: " + err.message);
-        return;
-      }
-
-      //otherwise, all good
-      finished(undefined, {"recent" : res.body});
-
-    });
-  }
-  self.getSeeds = function(type, maxCount, finished)
-  {
-    var apiPath = "/seeds";
-
-    //grab the seeds (up to a maximum number)
-    self.getWIN(apiPath, {maxSeeds: maxCount}, function(err, res)
-    {
-      // self.log("Artifact return: ", err, " res: ", res.error);
-      if(err)
-      {
-        finished(err);
-        return;
-      }
-      else if(res.statusCode == 500 || res.statusCode == 404)
-      {
-        finished("Server Seed failure: " + JSON.stringify(res.error) + " | message: " + err.message);
-        return;
-      }
-
-      //otherwise, all good -- pass the body back -- just a list of artifacts
-      finished(undefined, res.body);
-
-    });
-  }
-
-  return self;
-
-}
-
-
-});
-
-require.modules["optimuslime-win-query"] = require.modules["optimuslime~win-query@0.0.1-4"];
-require.modules["optimuslime~win-query"] = require.modules["optimuslime~win-query@0.0.1-4"];
-require.modules["win-query"] = require.modules["optimuslime~win-query@0.0.1-4"];
 
 
 require.register("techjacker~q@master", function (exports, module) {
@@ -9079,6 +8944,141 @@ require.modules["optimuslime~win-gen"] = require.modules["optimuslime~win-gen@0.
 require.modules["win-gen"] = require.modules["optimuslime~win-gen@0.0.2-8"];
 
 
+require.register("optimuslime~win-publish@0.0.1-4", function (exports, module) {
+//superagent handles browser or node.js requests
+//thank you tjholowaychuk
+var request = require('visionmedia~superagent@master');
+
+//now we're ready to get into this module
+module.exports = winpublish;
+
+function winpublish(backbone, globalConfig, localConfig)
+{
+	//pull in backbone info, we gotta set our logger/emitter up
+	var self = this;
+
+	self.winFunction = "publish";
+
+	//this is how we talk to win-backbone
+	self.backEmit = backbone.getEmitter(self);
+
+	//grab our logger
+	self.log = backbone.getLogger(self);
+
+	//only vital stuff goes out for normal logs
+	self.log.logLevel = localConfig.logLevel || self.log.normal;
+
+	//we have logger and emitter, set up some of our functions
+
+	if(!globalConfig.server)
+		throw new Error("Global configuration requires server location and port")
+
+	self.hostname = globalConfig.server;
+	self.port = globalConfig.port;
+	
+	//what events do we need?
+	//none for now, though in the future, we might have a way to communicate with foreign win-backbones as if it was just sending
+	//a message within our own backbone -- thereby obfuscating what is done remotely and what is done locally 
+	self.requiredEvents = function()
+	{
+		return [
+		];
+	}
+
+	//what events do we respond to?
+	self.eventCallbacks = function()
+	{ 
+		return {
+			"publish:publishArtifacts" : self.publishArtifacts
+		};
+	}
+
+	var baseWIN = function()
+	{
+		return self.hostname + (self.port ? ":" + self.port : "") + "/api";
+	}
+
+	self.getWIN = function(apiPath, data, resFunction)
+	{
+		var base = baseWIN();
+
+		request
+		  .get(base + apiPath)
+		  // .send(data)
+		  .set('Accept', 'application/json')
+		  .end(resFunction);
+	}
+
+	self.postWIN = function(apiPath, data, resFunction)
+	{
+		var base = baseWIN();
+
+		request
+		  .post(base + apiPath)
+		  .send(data)
+		  .set('Accept', 'application/json')
+		  .end(resFunction);
+	}
+
+	//publish many at a time! Heading out to the internet thank you
+	self.publishArtifacts = function(type, session, individuals, privateIndividuals, finished)
+	{
+		//need to hit the server for certain behavior
+		var apiPath = '/artifacts';
+		
+		var artifacts = individuals;
+		var privateArtifacts = privateIndividuals;
+		//artifacts going in must be in an array -- this will change in the future 
+		//for backwards compat, it is what it is
+
+		// if(Array.isArray(individuals, privateIndividuals))
+		// {
+		// 	artifacts = {};
+		// 	for(var i=0; i < individuals, privateIndividuals.length; i++)
+		// 	{
+		// 		var ind = individuals, privateIndividuals[i];
+		// 		artifacts[ind.wid] = ind;
+		// 	}
+		// }
+
+		var data = {artifacts: artifacts, privateArtifacts: privateArtifacts, artifactType: type, user: '', sessionID: session.sessionID, publish: session.publish};
+
+		self.postWIN(apiPath, data, function(err, res)
+		{
+			self.log("Artifact return: ", err, " res: ", res.error);
+			if(err)
+			{
+				finished(err);
+				return;
+			}
+			else if(res.statusCode == 500 || res.statusCode == 404)
+			{
+				finished("Server failure: " + JSON.stringify(res.error) + " | message: " + err.message);
+				return;
+			}
+
+
+			//otherwise, all good
+			finished();
+
+			//maybe wwe do other things, don't know yet
+		});
+	}
+
+	return self;
+}
+
+
+
+
+
+});
+
+require.modules["optimuslime-win-publish"] = require.modules["optimuslime~win-publish@0.0.1-4"];
+require.modules["optimuslime~win-publish"] = require.modules["optimuslime~win-publish@0.0.1-4"];
+require.modules["win-publish"] = require.modules["optimuslime~win-publish@0.0.1-4"];
+
+
 require.register("optimuslime~win-backbone@0.0.4-5", function (exports, module) {
 
 //Control all the win module! Need emitter for basic usage. 
@@ -9893,6 +9893,120 @@ require.modules["optimuslime~win-backbone"] = require.modules["optimuslime~win-b
 require.modules["win-backbone"] = require.modules["optimuslime~win-backbone@0.0.4-5"];
 
 
+require.register("optimuslime~win-data@0.0.1-3", function (exports, module) {
+var request = require('visionmedia~superagent@master');
+
+module.exports = windata;
+
+
+function windata(backbone, globalConfig, localConfig)
+{
+	var self= this;
+
+	//need to make requests, much like win-publish
+	//pull in backbone info, we gotta set our logger/emitter up
+	var self = this;
+
+	self.winFunction = "data";
+
+	//this is how we talk to win-backbone
+	self.backEmit = backbone.getEmitter(self);
+
+	//grab our logger
+	self.log = backbone.getLogger(self);
+
+	//only vital stuff goes out for normal logs
+	self.log.logLevel = localConfig.logLevel || self.log.normal;
+
+	//we have logger and emitter, set up some of our functions
+
+	if(!globalConfig.server)
+		throw new Error("Global configuration requires server location and port")
+
+	self.hostname = globalConfig.server;
+	self.port = globalConfig.port;
+
+	//what events do we need?
+	//none for now, though in the future, we might have a way to communicate with foreign win-backbones as if it was just sending
+	//a message within our own backbone -- thereby obfuscating what is done remotely and what is done locally 
+	self.requiredEvents = function()
+	{
+		return [
+		];
+	}
+
+	//what events do we respond to?
+	self.eventCallbacks = function()
+	{ 
+		return {
+			"data:winPOST" : self.postWIN,
+			"data:winGET" : self.getWIN
+		};
+	}
+
+	 var baseWIN = function()
+	{
+		return self.hostname + (self.port ? ":" + self.port : "") + "/api";
+	}
+
+	self.getWIN = function(apiPath, queryObjects, resFunction)
+	{
+		var base = baseWIN();
+
+		if(typeof queryObjects == "function")
+		{
+		  resFunction = queryObjects;
+		  queryObjects = {};
+		}
+		else //make sure to always have at least an empty object
+		  queryObjects = queryObjects || {};
+
+		var qNotEmpty = false;
+		var queryAdditions = "?";
+		for(var key in queryObjects){
+		  if(queryAdditions.length > 1)
+		    queryAdditions += "&";
+
+		  qNotEmpty = true;
+		  queryAdditions += key + "=" + queryObjects[key];
+		} 
+		var fullPath = base + apiPath + (qNotEmpty ? queryAdditions : "");
+
+		self.log("Requesting get from: ",fullPath )
+		request
+		  .get(fullPath)
+		  // .send(data)
+		  .set('Accept', 'application/json')
+		  .end(resFunction);
+	}
+
+	self.postWIN = function(apiPath, data, resFunction)
+	{
+		var base = baseWIN();
+
+		var fullPath= base + apiPath;
+		self.log("Requesting post to: ",fullPath )
+
+		request
+		  .post(fullPath)
+		  .send(data)
+		  .set('Accept', 'application/json')
+		  .end(resFunction);
+	}
+
+
+	return self;
+}
+
+
+
+});
+
+require.modules["optimuslime-win-data"] = require.modules["optimuslime~win-data@0.0.1-3"];
+require.modules["optimuslime~win-data"] = require.modules["optimuslime~win-data@0.0.1-3"];
+require.modules["win-data"] = require.modules["optimuslime~win-data@0.0.1-3"];
+
+
 require.register("optimuslime~win-phylogeny@0.0.1-1", function (exports, module) {
 //this will help us navigate complicated json tree objects
 var traverse = require('optimuslime~traverse@master');
@@ -10298,120 +10412,6 @@ function winphylogeny(backbone, globalConfig, localConfig)
 require.modules["optimuslime-win-phylogeny"] = require.modules["optimuslime~win-phylogeny@0.0.1-1"];
 require.modules["optimuslime~win-phylogeny"] = require.modules["optimuslime~win-phylogeny@0.0.1-1"];
 require.modules["win-phylogeny"] = require.modules["optimuslime~win-phylogeny@0.0.1-1"];
-
-
-require.register("optimuslime~win-data@0.0.1-3", function (exports, module) {
-var request = require('visionmedia~superagent@master');
-
-module.exports = windata;
-
-
-function windata(backbone, globalConfig, localConfig)
-{
-	var self= this;
-
-	//need to make requests, much like win-publish
-	//pull in backbone info, we gotta set our logger/emitter up
-	var self = this;
-
-	self.winFunction = "data";
-
-	//this is how we talk to win-backbone
-	self.backEmit = backbone.getEmitter(self);
-
-	//grab our logger
-	self.log = backbone.getLogger(self);
-
-	//only vital stuff goes out for normal logs
-	self.log.logLevel = localConfig.logLevel || self.log.normal;
-
-	//we have logger and emitter, set up some of our functions
-
-	if(!globalConfig.server)
-		throw new Error("Global configuration requires server location and port")
-
-	self.hostname = globalConfig.server;
-	self.port = globalConfig.port;
-
-	//what events do we need?
-	//none for now, though in the future, we might have a way to communicate with foreign win-backbones as if it was just sending
-	//a message within our own backbone -- thereby obfuscating what is done remotely and what is done locally 
-	self.requiredEvents = function()
-	{
-		return [
-		];
-	}
-
-	//what events do we respond to?
-	self.eventCallbacks = function()
-	{ 
-		return {
-			"data:winPOST" : self.postWIN,
-			"data:winGET" : self.getWIN
-		};
-	}
-
-	 var baseWIN = function()
-	{
-		return self.hostname + (self.port ? ":" + self.port : "") + "/api";
-	}
-
-	self.getWIN = function(apiPath, queryObjects, resFunction)
-	{
-		var base = baseWIN();
-
-		if(typeof queryObjects == "function")
-		{
-		  resFunction = queryObjects;
-		  queryObjects = {};
-		}
-		else //make sure to always have at least an empty object
-		  queryObjects = queryObjects || {};
-
-		var qNotEmpty = false;
-		var queryAdditions = "?";
-		for(var key in queryObjects){
-		  if(queryAdditions.length > 1)
-		    queryAdditions += "&";
-
-		  qNotEmpty = true;
-		  queryAdditions += key + "=" + queryObjects[key];
-		} 
-		var fullPath = base + apiPath + (qNotEmpty ? queryAdditions : "");
-
-		self.log("Requesting get from: ",fullPath )
-		request
-		  .get(fullPath)
-		  // .send(data)
-		  .set('Accept', 'application/json')
-		  .end(resFunction);
-	}
-
-	self.postWIN = function(apiPath, data, resFunction)
-	{
-		var base = baseWIN();
-
-		var fullPath= base + apiPath;
-		self.log("Requesting post to: ",fullPath )
-
-		request
-		  .post(fullPath)
-		  .send(data)
-		  .set('Accept', 'application/json')
-		  .end(resFunction);
-	}
-
-
-	return self;
-}
-
-
-
-});
-
-require.modules["optimuslime-win-data"] = require.modules["optimuslime~win-data@0.0.1-3"];
-require.modules["optimuslime~win-data"] = require.modules["optimuslime~win-data@0.0.1-3"];
-require.modules["win-data"] = require.modules["optimuslime~win-data@0.0.1-3"];
 
 
 require.register("optimuslime~cppnjs@0.2.7", function (exports, module) {
@@ -16497,47 +16497,6 @@ require.modules["component~keyname"] = require.modules["component~keyname@0.1.0"
 require.modules["keyname"] = require.modules["component~keyname@0.1.0"];
 
 
-require.register("component~type@1.0.0", function (exports, module) {
-
-/**
- * toString ref.
- */
-
-var toString = Object.prototype.toString;
-
-/**
- * Return the type of `val`.
- *
- * @param {Mixed} val
- * @return {String}
- * @api public
- */
-
-module.exports = function(val){
-  switch (toString.call(val)) {
-    case '[object Function]': return 'function';
-    case '[object Date]': return 'date';
-    case '[object RegExp]': return 'regexp';
-    case '[object Arguments]': return 'arguments';
-    case '[object Array]': return 'array';
-    case '[object String]': return 'string';
-  }
-
-  if (val === null) return 'null';
-  if (val === undefined) return 'undefined';
-  if (val && val.nodeType === 1) return 'element';
-  if (val === Object(val)) return 'object';
-
-  return typeof val;
-};
-
-});
-
-require.modules["component-type"] = require.modules["component~type@1.0.0"];
-require.modules["component~type"] = require.modules["component~type@1.0.0"];
-require.modules["type"] = require.modules["component~type@1.0.0"];
-
-
 require.register("component~props@1.1.2", function (exports, module) {
 /**
  * Global Names
@@ -16791,6 +16750,47 @@ function stripNested (prop, str, val) {
 require.modules["component-to-function"] = require.modules["component~to-function@2.0.6"];
 require.modules["component~to-function"] = require.modules["component~to-function@2.0.6"];
 require.modules["to-function"] = require.modules["component~to-function@2.0.6"];
+
+
+require.register("component~type@1.0.0", function (exports, module) {
+
+/**
+ * toString ref.
+ */
+
+var toString = Object.prototype.toString;
+
+/**
+ * Return the type of `val`.
+ *
+ * @param {Mixed} val
+ * @return {String}
+ * @api public
+ */
+
+module.exports = function(val){
+  switch (toString.call(val)) {
+    case '[object Function]': return 'function';
+    case '[object Date]': return 'date';
+    case '[object RegExp]': return 'regexp';
+    case '[object Arguments]': return 'arguments';
+    case '[object Array]': return 'array';
+    case '[object String]': return 'string';
+  }
+
+  if (val === null) return 'null';
+  if (val === undefined) return 'undefined';
+  if (val && val.nodeType === 1) return 'element';
+  if (val === Object(val)) return 'object';
+
+  return typeof val;
+};
+
+});
+
+require.modules["component-type"] = require.modules["component~type@1.0.0"];
+require.modules["component~type"] = require.modules["component~type@1.0.0"];
+require.modules["type"] = require.modules["component~type@1.0.0"];
 
 
 require.register("component~each@0.2.6", function (exports, module) {
@@ -17532,6 +17532,60 @@ require.modules["timoxley~next-tick"] = require.modules["timoxley~next-tick@0.0.
 require.modules["next-tick"] = require.modules["timoxley~next-tick@0.0.2"];
 
 
+require.register("yields~has-transitions@1.0.0", function (exports, module) {
+/**
+ * Check if `el` or browser supports transitions.
+ *
+ * @param {Element} el
+ * @return {Boolean}
+ * @api public
+ */
+
+exports = module.exports = function(el){
+  switch (arguments.length) {
+    case 0: return bool;
+    case 1: return bool
+      ? transitions(el)
+      : bool;
+  }
+};
+
+/**
+ * Check if the given `el` has transitions.
+ *
+ * @param {Element} el
+ * @return {Boolean}
+ * @api private
+ */
+
+function transitions(el, styl){
+  if (el.transition) return true;
+  styl = window.getComputedStyle(el);
+  return !! parseFloat(styl.transitionDuration, 10);
+}
+
+/**
+ * Style.
+ */
+
+var styl = document.body.style;
+
+/**
+ * Export support.
+ */
+
+var bool = 'transition' in styl
+  || 'webkitTransition' in styl
+  || 'MozTransition' in styl
+  || 'msTransition' in styl;
+
+});
+
+require.modules["yields-has-transitions"] = require.modules["yields~has-transitions@1.0.0"];
+require.modules["yields~has-transitions"] = require.modules["yields~has-transitions@1.0.0"];
+require.modules["has-transitions"] = require.modules["yields~has-transitions@1.0.0"];
+
+
 require.register("ecarter~css-emitter@0.0.1", function (exports, module) {
 /**
  * Module Dependencies
@@ -17616,60 +17670,6 @@ CssEmitter.prototype.once = function(fn){
 require.modules["ecarter-css-emitter"] = require.modules["ecarter~css-emitter@0.0.1"];
 require.modules["ecarter~css-emitter"] = require.modules["ecarter~css-emitter@0.0.1"];
 require.modules["css-emitter"] = require.modules["ecarter~css-emitter@0.0.1"];
-
-
-require.register("yields~has-transitions@1.0.0", function (exports, module) {
-/**
- * Check if `el` or browser supports transitions.
- *
- * @param {Element} el
- * @return {Boolean}
- * @api public
- */
-
-exports = module.exports = function(el){
-  switch (arguments.length) {
-    case 0: return bool;
-    case 1: return bool
-      ? transitions(el)
-      : bool;
-  }
-};
-
-/**
- * Check if the given `el` has transitions.
- *
- * @param {Element} el
- * @return {Boolean}
- * @api private
- */
-
-function transitions(el, styl){
-  if (el.transition) return true;
-  styl = window.getComputedStyle(el);
-  return !! parseFloat(styl.transitionDuration, 10);
-}
-
-/**
- * Style.
- */
-
-var styl = document.body.style;
-
-/**
- * Export support.
- */
-
-var bool = 'transition' in styl
-  || 'webkitTransition' in styl
-  || 'MozTransition' in styl
-  || 'msTransition' in styl;
-
-});
-
-require.modules["yields-has-transitions"] = require.modules["yields~has-transitions@1.0.0"];
-require.modules["yields~has-transitions"] = require.modules["yields~has-transitions@1.0.0"];
-require.modules["has-transitions"] = require.modules["yields~has-transitions@1.0.0"];
 
 
 require.register("component~once@0.0.1", function (exports, module) {
@@ -21472,7 +21472,7 @@ var flexStatic = require('flexStatic');
 console.log("Static a go!");
 });
 
-require.define("win-iesor/iesorConfig.json", {"serverRoot":"http://localhost:3000","apiRoot":"","winHostPort":3001});
+require.define("win-iesor/iesorConfig.json", {"serverRoot":"http://winark.org","apiRoot":"/apps/win-IESoR","winHostPort":3001});
 
 require.modules["win-iesor"] = require.modules["win-iesor"];
 
